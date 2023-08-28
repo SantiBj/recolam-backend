@@ -78,6 +78,8 @@ class Trip(models.Model):
     endDateCompany = models.DateTimeField()
     initialDateCustomer = models.DateTimeField()
     endDateCustomer = models.DateTimeField()
+    weightAvg = models.DecimalField()
+    details = models.CharField(max_length=300)
     isComplete = models.BooleanField(default=False)
 
     class Meta:
