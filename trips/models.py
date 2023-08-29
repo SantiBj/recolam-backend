@@ -71,16 +71,17 @@ class Truck(models.Model):
 
 
 class Trip(models.Model):
-    truck = models.ForeignKey(Truck, on_delete=models.CASCADE)
+    truck = models.ForeignKey(Truck, on_delete=models.CASCADE,null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     scheduleDay = models.DateField()
-    initialDateCompany = models.DateTimeField()
-    endDateCompany = models.DateTimeField()
-    initialDateCustomer = models.DateTimeField()
-    endDateCustomer = models.DateTimeField()
-    weightAvg = models.DecimalField()
+    initialDateCompany = models.DateTimeField(null=True)
+    endDateCompany = models.DateTimeField(null=True)
+    initialDateCustomer = models.DateTimeField(null=True)
+    endDateCustomer = models.DateTimeField(null=True)
+    weightAvg = models.DecimalField(max_digits=6,decimal_places=3)
     details = models.CharField(max_length=300)
     isComplete = models.BooleanField(default=False)
+    isDisable = models.BooleanField(default=False)
 
     class Meta:
         db_table = "trips"

@@ -1,6 +1,6 @@
 from rest_framework.generics import CreateAPIView,ListAPIView,RetrieveAPIView,DestroyAPIView,UpdateAPIView
-from trips.serializers.tripSerializers import CreateCustTripSerializer,TripSerializer
-from trips.models import Trip
+from ..serializers.tripSerializers import PartialSerializer,CreateCustTripSerializer,TripSerializer
+from ..models import Trip
 from rest_framework.response import Response
 from rest_framework import status 
 
@@ -9,36 +9,49 @@ class CustomerTripCreateAPIView(CreateAPIView):
     serializer_class = CreateCustTripSerializer
 
     def post(self, request):
-        serializer = CreateCustTripSerializer(request.data)
+        serializer = CreateCustTripSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response({"error":"Data Not Valid"},status=status.HTTP_400_BAD_REQUEST)
     
 class AdminTripCreateAPIView(CreateAPIView):
-    serializer_class = Trip
+    serializer_class = TripSerializer
 
     def post(self,request):
-        serializer = TripSerializer(request.data)
+        serializer = TripSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response({"error":"Data Not Valid"},status=status.HTTP_400_BAD_REQUEST)
     
 class TripUpdateAPIView(UpdateAPIView):
-    # solo se actualiza un atributo a la vez no todos 
-    def patch(self,request,*args, **kwargs):
-        instance = Trip.objects.get(pk=kwargs["pk"])
-        dataReceived = request.data
+    # solo se actualizan los atributos enviados, no deben ser todos 
+    queryset = Trip.objects.all()
+    serializer_class = PartialSerializer
+
+class TripDestroyAPIView(DestroyAPIView):
+    serializer_class = TripSerializer
+    #lookup_field = 'pk'
+
+    def destroy(self, request, *args, **kwargs):
         try:
-            for key in dataReceived.keys():
-                instance.key = dataReceived[key]
+            instance = Trip.objects.get(pk=kwargs["pk"])
+            instance.isDisable = True
+            instance.save()
+            return Response({"message":"trip destroy with success"})
         except:
             return Response({"error":"Data Not Valid"},status=status.HTTP_400_BAD_REQUEST)
-        instance.save()
-        serializer = TripSerializer(instance)
+
+class TripRetrieveAPIView(RetrieveAPIView):
+    queryset = Trip.objects.all()
+    serializer_class=TripSerializer
+    lookup_field = 'pk'
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
         return Response(serializer.data,status=status.HTTP_200_OK)
-     
 
 
-        
+
