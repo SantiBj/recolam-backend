@@ -1,17 +1,14 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
 from ..models import Trip
 
-class TripSerializer(ModelSerializer):
+class TripSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(required=False)
     class Meta:
         model = Trip
         fields = "__all__"
 
-class CreateCustTripSerializer(ModelSerializer):
-    class Meta:
-        model = Trip
-        fields = ['user','scheduleDay','weightAvg','details']
 
-class PartialSerializer(ModelSerializer):
+class PartialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trip
         fields = "__all__"
