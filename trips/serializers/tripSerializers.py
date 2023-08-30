@@ -9,12 +9,13 @@ class TripSerializer(serializers.ModelSerializer):
 
 
 class PartialSerializer(serializers.ModelSerializer):
+    truck = serializers.CharField(required=False)
+    user = serializers.CharField(required=False)
+    scheduleDay = serializers.DateField(required=False)
+    weightAvg = serializers.DecimalField(max_digits=6,decimal_places=3,required=False)
+    details = serializers.CharField(required=False)
+    
     class Meta:
         model = Trip
         fields = "__all__"
-    
-    def update(self, instance, validated_data):
-        for attr,value in validated_data.items():
-            setattr(instance,attr,value)
-        instance.save()
-        return instance
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
