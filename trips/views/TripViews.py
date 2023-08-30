@@ -4,6 +4,7 @@ from ..models import Trip
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
+from django.utils import timezone
 
 
 class TripCreateAPIView(CreateAPIView):
@@ -11,17 +12,17 @@ class TripCreateAPIView(CreateAPIView):
 
     def create(self, request):
         number_trips_for_day = Trip.objects.filter(
-            scheduleDay=request.data["scheduleDay"]).count()
+            Q(scheduleDay=request.data["scheduleDay"]) & Q(isDisable=False)).count()
         if int(number_trips_for_day) >= 30:
             return Response({"message": "full travel capacity for this day"}, status=status.HTTP_409_CONFLICT)
 
         number_trips_for_truck = None
         if request.data["truck"]:
             number_trips_for_truck = Trip.objects.filter(
-                Q(scheduleDay=request.data["scheduleDay"]) & Q(truck=request.data["truck"])).count()
+                Q(scheduleDay=request.data["scheduleDay"]) & Q(truck=request.data["truck"])).count() & Q(isDisable=False)
         if not number_trips_for_truck is None:
             if int(number_trips_for_truck) == 3:
-                return Response({"message":"the capacity of travels for truck is full in this day"}, status=status.HTTP_409_CONFLICT)
+                return Response({"message": "the capacity of travels for truck is full in this day"}, status=status.HTTP_409_CONFLICT)
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -29,11 +30,21 @@ class TripCreateAPIView(CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# TODO
+# actualizar los que tengan el disable en false
+
 
 class TripUpdateAPIView(UpdateAPIView):
     # solo se actualizan los atributos enviados, no deben ser todos
     queryset = Trip.objects.all()
     serializer_class = PartialSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = Trip.objects.get(
+            Q(id=int(kwargs["pk"])) & Q(isDisable=False))
+        serializer = PartialSerializer(data=instance)
+        serializer.update(instance=serializer.data,validated_data=request.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TripDestroyAPIView(DestroyAPIView):
@@ -55,3 +66,14 @@ class TripRetrieveAPIView(RetrieveAPIView):
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     lookup_field = 'pk'
+
+
+class AsignTimeInitialTripCompany(UpdateAPIView):
+    queryset = Trip.objects.all()
+    lookup_field = 'pk'
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object
+        instance.initialDateCompany = timezone.now()
+        self.perform_update(instance)
+        return Response({"message": "update success"}, status=status.HTTP_200_OK)
