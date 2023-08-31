@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from django.utils import timezone
+from datetime import datetime
 
 
 class TripCreateAPIView(CreateAPIView):
@@ -84,7 +85,7 @@ class TripRetrieveAPIView(RetrieveAPIView):
         if not instance.isDisable:
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response({"error": "trip not found"},status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AsignTimeInitialTripCompany(UpdateAPIView):
@@ -98,4 +99,71 @@ class AsignTimeInitialTripCompany(UpdateAPIView):
             instance.initialDateCompany = timezone.now()
             self.perform_update(instance)
             return Response({"message": "update success"}, status=status.HTTP_200_OK)
-        return Response({"error": "trip not found"},status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AsignTimeEndTripCompany(UpdateAPIView):
+    queryset = Trip.objects.all()
+    serializer_class = TripSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "pk"
+
+    def update(self, request, **kwargs):
+        instance = self.get_object()
+        if not instance.isDisable and instance.endDateCustomer is None:
+            return Response({"error": "the customer's departure date is required first"}, status=status.HTTP_400_BAD_REQUEST)
+        if not instance.isDisable:
+            instance.endDateCompany = timezone.now()
+            instance.isComplete = True
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TripsForDateListAPIView(ListAPIView):
+    serializer_class = TripSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            date = datetime.strptime(kwargs["date"], '%Y-%m-%d')
+            trips = Trip.objects.filter(
+                Q(isDisable=False) & Q(scheduleDay=date)
+            )
+            serializer = self.serializer_class(trips, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AsignTimeArriveCustomer(UpdateAPIView):
+    queryset = Trip.objects.all()
+    serializer_class = TripSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "pk"
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance.isDisable:
+            if 
+            instance.initialDateCustomer = timezone.now()
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AsignTimeEndCustomer(UpdateAPIView):
+    queryset = Trip.objects.all()
+    serializer_class = TripSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "pk"
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance.isDisable:
+            instance.endDateCustomer = timezone.now()
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
