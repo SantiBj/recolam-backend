@@ -1,4 +1,3 @@
-'''
 from rest_framework import generics
 from ..models import Trip
 from ..serializers.truckSerializers import TruckSerializer
@@ -20,4 +19,3 @@ class truck_available_In_Date_ListAPIView(generics.ListAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "there are no trucks available on the date entered"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-'''

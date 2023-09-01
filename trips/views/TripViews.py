@@ -1,6 +1,6 @@
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
 from ..serializers.tripSerializers import PartialSerializer, TripSerializer
-from ..models import Trip
+from ..models import Trip, Truck, User
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -13,24 +13,29 @@ class TripCreateAPIView(CreateAPIView):
 
     def create(self, request):
         try:
-            number_trips_for_day = Trip.objects.filter(
-                Q(scheduleDay=request.data["scheduleDay"]) & Q(isDisable=False)).count()
-            if int(number_trips_for_day) >= 30:
-                return Response({"message": "full travel capacity for this day"}, status=status.HTTP_409_CONFLICT)
+            date = datetime.strptime(
+                request.data["scheduleDay"], '%Y-%m-%d').date()
+            today = timezone.now().date()
+            if date == today or date > today:
+                number_trips_for_day = Trip.objects.filter(
+                    Q(scheduleDay=request.data["scheduleDay"]) & Q(isDisable=False)).count()
+                if int(number_trips_for_day) >= 30:
+                    return Response({"message": "full travel capacity for this day"}, status=status.HTTP_409_CONFLICT)
 
-            number_trips_for_truck = None
-            if request.data["truck"]:
-                number_trips_for_truck = Trip.objects.filter(
-                    Q(scheduleDay=request.data["scheduleDay"]) & Q(truck=request.data["truck"]) & Q(isDisable=False)).count()
-            if not number_trips_for_truck is None:
-                if int(number_trips_for_truck) == 3:
-                    return Response({"message": "the capacity of travels for truck is full in this day"}, status=status.HTTP_409_CONFLICT)
+                number_trips_for_truck = None
+                if "truck" in request.data:
+                    number_trips_for_truck = Trip.objects.filter(
+                        Q(scheduleDay=request.data["scheduleDay"]) & Q(truck=request.data["truck"]) & Q(isDisable=False)).count()
+                if not number_trips_for_truck is None:
+                    if int(number_trips_for_truck) == 3:
+                        return Response({"message": "the capacity of travels for truck is full in this day"}, status=status.HTTP_409_CONFLICT)
 
-            serializer = TripSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save(user=request.user)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                serializer = TripSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save(user=request.user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
         except TypeError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -96,9 +101,11 @@ class AsignTimeInitialTripCompany(UpdateAPIView):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if not instance.isDisable:
-            instance.initialDateCompany = timezone.now()
-            self.perform_update(instance)
-            return Response({"message": "update success"}, status=status.HTTP_200_OK)
+            if not instance.truck is None:
+                instance.initialDateCompany = timezone.now()
+                self.perform_update(instance)
+                return Response({"message": "update success"}, status=status.HTTP_200_OK)
+            return Response({"message": "cannot init trip without a truck assign"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -175,3 +182,132 @@ class AsignTimeEndCustomer(UpdateAPIView):
             else:
                 return Response({"error": "customer trip departure date is required"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TripsActivesListAPIView(ListAPIView):
+    serializer_class = TripSerializer
+
+    def list(self, request, *args, **kwargs):
+        today = timezone.now().date()
+        trips = Trip.objects.filter(Q(scheduleDay=today) & Q(isDisable=False))
+        tripsActives = []
+        for trip in trips:
+            if not trip.initialDateCompany is None:
+                tripsActives.append(trip)
+        if len(tripsActives) > 0:
+            print(tripsActives)
+            serializer = self.get_serializer(tripsActives, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"message": "no found tripd actives for today"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AddTruckToTrip(UpdateAPIView):
+    serializer_class = TripSerializer
+    queryset = Trip.objects.all()
+    lookup_field = "id"
+    lookup_url_kwarg = "pk"
+
+    def update(self, request, *args, **kwargs):
+        trip = self.get_object()
+        if trip.initialDateCompany is None:
+            today = timezone.now().date()
+            if trip.scheduleDay == today or trip.scheduleDay > today:
+                if trip.truck is None:
+                    truck = Truck.objects.filter(placa=kwargs["placa"])
+                    if len(truck) > 0:
+                        trip.truck = truck[0]
+                        trip.save()
+                        serializer = self.get_serializer(trip)
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+                    return Response({"message": "truck not found"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "Cannot assign a truck to a trip with truck already assign"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Cannot assign a truck to a past trip"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "truck cannot be assigned to a trip that has already started"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TripsWithoutTruck(ListAPIView):
+    serializer_class = TripSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            date = datetime.strptime(kwargs["date"], '%Y-%m-%d').date()
+            today = timezone.now().date()
+            if date == today or date > today:
+                trips = Trip.objects.filter(
+                    Q(scheduleDay=date) & Q(isDisable=False))
+                tripsWithoutTruck = []
+                for trip in trips:
+                    if trip.truck is None:
+                        tripsWithoutTruck.append(trip)
+                if len(tripsWithoutTruck) > 0:
+                    serializer = self.get_serializer(
+                        tripsWithoutTruck, many=True)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response({"message": "not exists trips assign for date inserted"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TripsWithoutInitCustomers(ListAPIView):
+    serializer_class = TripSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            date = datetime.strptime(kwargs["date"], '%Y-%m-%d').date()
+            today = timezone.now().date()
+            if date == today or date > today:
+                trips = Trip.objects.filter(Q(user=request.user) & Q(
+                    isDisable=False) & Q(scheduleDay=date))
+                if len(trips) > 0:
+                    tripsWithoutArrivedComp = []
+                    for trip in trips:
+                        if trip.initialDateCompany is None:
+                            tripsWithoutArrivedComp.append(trip)
+                    if len(tripsWithoutArrivedComp) > 0:
+                        serializer = self.get_serializer(
+                            tripsWithoutArrivedComp, many=True)
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+                    return Response({"message": "not found trips with init for this customer"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "not found trips for this customer in date inserted"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TripsWithDateInitCompany(ListAPIView):
+    serializer_class = TripSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()
+            today = timezone.now().date()
+            if date == today or date > today:
+                trips = Trip.objects.filter(
+                    Q(user=request.user) & Q(
+                        isDisable=False) & Q(scheduleDay=date)
+                )
+                if len(trips) > 0:
+                    tripsWithDateInitComp = []
+                    for trip in trips:
+                        if not trip.initialDateCompany is None and trip.endDateCompany is None:
+                            tripsWithDateInitComp.append(trip)
+                    if len(tripsWithDateInitComp) > 0:
+                        serializer = self.get_serializer(
+                            tripsWithDateInitComp, many=True)
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+                    return Response({"message": "not found trips for this customer with trips init"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "not found trips for this customer in date inserted"})
+            return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+class EndTripsForCustomer(ListAPIView):
+    serializer_class = TripSerializer
+
+    def list(self, request, *args, **kwargs):
+        trips = Trip.objects.filter(Q(user = request.user) & Q(isDisable=False) & Q(isComplete=True))
+        if len(trips) > 0:
+            serializer = self.get_serializer(trips,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response({"message":"customer not have trips finished"},status=status.HTTP_400_BAD_REQUEST)
