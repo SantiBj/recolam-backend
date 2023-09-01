@@ -113,11 +113,14 @@ class AsignTimeEndTripCompany(UpdateAPIView):
         if not instance.isDisable and instance.endDateCustomer is None:
             return Response({"error": "the customer's departure date is required first"}, status=status.HTTP_400_BAD_REQUEST)
         if not instance.isDisable:
-            instance.endDateCompany = timezone.now()
-            instance.isComplete = True
-            instance.save()
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if not instance.endDateCustomer is None:
+                instance.endDateCompany = timezone.now()
+                instance.isComplete = True
+                instance.save()
+                serializer = self.get_serializer(instance)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "customer trip finish date is required"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -145,11 +148,13 @@ class AsignTimeArriveCustomer(UpdateAPIView):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if not instance.isDisable:
-            if 
-            instance.initialDateCustomer = timezone.now()
-            instance.save()
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if not instance.initialDateCompany is None:
+                instance.initialDateCustomer = timezone.now()
+                instance.save()
+                serializer = self.get_serializer(instance)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "company trip departure date is required"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -162,8 +167,11 @@ class AsignTimeEndCustomer(UpdateAPIView):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if not instance.isDisable:
-            instance.endDateCustomer = timezone.now()
-            instance.save()
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if not instance.initialDateCustomer is None:
+                instance.endDateCustomer = timezone.now()
+                instance.save()
+                serializer = self.get_serializer(instance)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "customer trip departure date is required"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
