@@ -10,7 +10,7 @@ from .views.TripViews import (
     AsignTimeArriveCustomer,
     AsignTimeEndCustomer
 )
-#from .views.TruckViews import truck_available_In_Date_ListAPIView
+from .views.TruckViews import truck_available_In_Date_ListAPIView
 
 urlpatterns = [
     path("trip-create",TripCreateAPIView.as_view()),
@@ -22,7 +22,7 @@ urlpatterns = [
     path("trip-for-date/<str:date>",TripsForDateListAPIView.as_view()),
     path("trip-init-customer/<int:pk>",AsignTimeArriveCustomer.as_view()),
     path("trip-end-customer/<int:pk>",AsignTimeEndCustomer.as_view()),
-    #path("trucks-available-date",truck_available_In_Date_ListAPIView.as_view())
+    path("trucks-available-date",truck_available_In_Date_ListAPIView.as_view())
 ]
 
 
