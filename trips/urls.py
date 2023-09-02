@@ -9,13 +9,15 @@ from .views.TripViews import (
     TripsForDateListAPIView,
     AsignTimeArriveCustomer,
     AsignTimeEndCustomer,
-    TripsActivesListAPIView,
     AddTruckToTrip,
     TripsWithoutTruck,
     TripsWithoutInitCustomers,
     TripsWithDateInitCompany,
-    EndTripsForCustomer
+    EndTripsForCustomer,
+    TripsWithoutInitForDate,
+    TripsActivesToday,
 )
+from .views.CustomerViews import CustomerListAPIView,CustomerForNameSearch
 from .views.TruckViews import truck_available_In_Date_ListAPIView
 
 urlpatterns = [
@@ -29,12 +31,15 @@ urlpatterns = [
     path("trip-init-customer/<int:pk>",AsignTimeArriveCustomer.as_view()),
     path("trip-end-customer/<int:pk>",AsignTimeEndCustomer.as_view()),
     path("trucks-available-date",truck_available_In_Date_ListAPIView.as_view()),
-    path("trips-actives",TripsActivesListAPIView.as_view()),
     path("add-truck-trip/<int:pk>/<str:placa>",AddTruckToTrip.as_view()),
     path("trips-without-truck/<str:date>",TripsWithoutTruck.as_view()),
     path("trips-without-init/<str:date>",TripsWithoutInitCustomers.as_view()),
     path("trips-with-init/<str:date>",TripsWithDateInitCompany.as_view()),
-    path("trips-finished-customer",EndTripsForCustomer.as_view())
+    path("trips-finished-customer",EndTripsForCustomer.as_view()),
+    path("trips-without-init-date-all/<str:date>",TripsWithoutInitForDate.as_view()),
+    path("trips-actives-today-all",TripsActivesToday.as_view()),
+    path("customers",CustomerListAPIView.as_view()),
+    path("customer-search/<str:search>",CustomerForNameSearch.as_view())
 ]
 
 

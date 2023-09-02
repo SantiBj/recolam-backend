@@ -3,7 +3,7 @@ from rest_framework.authtoken.models import Token
 from trips.models import Session, User, Truck
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework import generics,permissions
+from rest_framework import generics, permissions
 from .serializers import UserPersonSerializer, UserTruckSerializer
 import json
 
@@ -36,6 +36,7 @@ def login(id):
 
 class Login(ObtainAuthToken):
     permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         try:
             # al comprobar si el usuario existe validad
@@ -47,19 +48,19 @@ class Login(ObtainAuthToken):
 
 class Register(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         data = request.data
         if (data["role"] == "truck"):
             serializer = UserTruckSerializer(data=data)
-            print(serializer)
             if serializer.is_valid():
                 serializer.save()
                 Truck.objects.create(placa=data["id"])
-                return Response(login(data["id"]))
-            return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"message": "data is not valid"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
             serializer = UserPersonSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(login(data["id"]))
-            return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"message": "data is not valid"}, status=status.HTTP_406_NOT_ACCEPTABLE)
