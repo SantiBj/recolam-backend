@@ -14,11 +14,11 @@ class TripsAvailableForDate(RetrieveAPIView):
             date = datetime.strptime(
                 kwargs["date"], '%Y-%m-%d').date()
             number_trips_for_day = Trip.objects.filter(
-                Q(scheduleDay=request.data["scheduleDay"]) & Q(isDisable=False)).count()
+                Q(scheduleDay=date) & Q(isDisable=False)).count()
             available = True if number_trips_for_day < 20 else False
-            return Response({"avaliable": bool(available)})
+            return Response({"avaliable": bool(available)}, status=status.HTTP_200_OK)
         except ValueError as e:
-            return
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TripCreateAPIView(CreateAPIView):
