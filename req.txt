@@ -5,8 +5,4 @@ pytz==2023.3
 sqlparse==0.4.4
 typing_extensions==4.7.1
 
-SELECT truck_id, count() as n_trips
-FROM trips
-WHERE scheduleDay = "2023-08-30"
-GROUP BY truck_id 
-HAVING n_trips < 3 
+
