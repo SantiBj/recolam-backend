@@ -20,6 +20,15 @@ class CustomerListAPIView(generics.ListAPIView):
         return Response({"message": "customers not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CustomerAddress(generics.RetrieveAPIView):
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            customer = User.objects.get(Q(id=kwargs["id"]) & Q(role="customer"))
+            return Response({"address": str(customer.address)}, status=status.HTTP_200_OK)
+        except:
+            return Response({"message": "user not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CustomerForNameSearch(generics.ListAPIView):
     serializer_class = CustomerSerializer
     pagination_class = CustomPagination

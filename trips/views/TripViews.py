@@ -45,7 +45,8 @@ class TripCreateAPIView(CreateAPIView):
 
                 serializer = TripSerializer(data=request.data)
                 if serializer.is_valid():
-                    serializer.save(user=request.user)
+                    serializer.save(
+                        user=request.data["customer"] if "customer" in request.data else request.user)
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)

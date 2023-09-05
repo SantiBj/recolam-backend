@@ -74,6 +74,7 @@ class Trip(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE,null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     scheduleDay = models.DateField()
+    #address= models.CharField(max_length=50)
     initialDateCompany = models.DateTimeField(null=True)
     endDateCompany = models.DateTimeField(null=True)
     initialDateCustomer = models.DateTimeField(null=True)
