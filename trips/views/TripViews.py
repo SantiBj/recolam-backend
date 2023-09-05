@@ -8,6 +8,19 @@ from datetime import datetime
 from ..pagination import CustomPagination
 
 
+class TripsAvailableForDate(RetrieveAPIView):
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            date = datetime.strptime(
+                kwargs["date"], '%Y-%m-%d').date()
+            number_trips_for_day = Trip.objects.filter(
+                Q(scheduleDay=date) & Q(isDisable=False)).count()
+            available = True if number_trips_for_day < 20 else False
+            return Response({"avaliable": bool(available)}, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class TripCreateAPIView(CreateAPIView):
     serializer_class = TripSerializer
 
@@ -19,7 +32,7 @@ class TripCreateAPIView(CreateAPIView):
             if date == today or date > today:
                 number_trips_for_day = Trip.objects.filter(
                     Q(scheduleDay=request.data["scheduleDay"]) & Q(isDisable=False)).count()
-                if int(number_trips_for_day) >= 30:
+                if int(number_trips_for_day) >= 20:
                     return Response({"message": "full travel capacity for this day"}, status=status.HTTP_409_CONFLICT)
 
                 number_trips_for_truck = None
