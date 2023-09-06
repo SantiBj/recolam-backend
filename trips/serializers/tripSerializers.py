@@ -4,6 +4,7 @@ from ..models import Trip
 class TripSerializer(serializers.ModelSerializer):
     user = serializers.CharField(required=False)
     address= serializers.CharField(required=False)
+    details = serializers.CharField(required=False)
 
     class Meta:
         model = Trip
