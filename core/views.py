@@ -63,4 +63,4 @@ class Register(generics.CreateAPIView):
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response({"message": "data is not valid"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response({"message": serializer.errors}, status=status.HTTP_406_NOT_ACCEPTABLE)
