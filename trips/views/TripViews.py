@@ -5,8 +5,9 @@ from ..models import Trip, Truck, User
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
-from datetime import datetime
+from datetime import datetime, time
 from ..pagination import CustomPagination
+from ..service.trips_service import validation_trip
 
 
 class QuantityTripsForCustomerInDate(RetrieveAPIView):
@@ -25,10 +26,9 @@ class TripsAvailableForDate(RetrieveAPIView):
         try:
             date = datetime.strptime(
                 kwargs["date"], '%Y-%m-%d').date()
-            number_trips_for_day = Trip.objects.filter(
-                Q(scheduleDay=date) & Q(isDisable=False)).count()
-            available = True if number_trips_for_day < 20 else False
-            return Response({"avaliable": bool(available)}, status=status.HTTP_200_OK)
+            response = validation_trip(date)
+            print(type(response.status_code))
+            return response
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -40,13 +40,8 @@ class TripCreateAPIView(CreateAPIView):
         try:
             date = datetime.strptime(
                 request.data["scheduleDay"], '%Y-%m-%d').date()
-            today = datetime.now().date()
-            if date == today or date > today:
-                number_trips_for_day = Trip.objects.filter(
-                    Q(scheduleDay=request.data["scheduleDay"]) & Q(isDisable=False)).count()
-                if int(number_trips_for_day) >= 20:
-                    return Response({"message": "full travel capacity for this day"}, status=status.HTTP_409_CONFLICT)
-
+            validationsDate = validation_trip(date)
+            if validationsDate.status_code == 200:
                 number_trips_for_truck = None
                 if "truck" in request.data:
                     number_trips_for_truck = Trip.objects.filter(
@@ -59,7 +54,6 @@ class TripCreateAPIView(CreateAPIView):
                 if serializer.is_valid():
                     if not "user" in request.data:
                         serializer.save(user=request.user)
-                        print(serializer)
                     else:
                         user = User.objects.filter(id=request.data["user"])
                         if len(user) > 0:
@@ -68,7 +62,7 @@ class TripCreateAPIView(CreateAPIView):
                             return Response({"message": "user not found"}, status=status.HTTP_400_BAD_REQUEST)
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
+            return validationsDate
         except TypeError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
