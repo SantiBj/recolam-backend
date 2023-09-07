@@ -1,11 +1,23 @@
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
 from ..serializers.tripSerializers import PartialSerializer, TripSerializer
+from ..serializers.customerSerializers import CustomerSerializer
 from ..models import Trip, Truck, User
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from datetime import datetime
 from ..pagination import CustomPagination
+
+
+class QuantityTripsForCustomerInDate(RetrieveAPIView):
+    def retrieve(self, request, *args, **kwargs):
+        user = User.objects.filter(id=kwargs["id"])
+        if len(user) > 0:
+            trips = Trip.objects.filter(Q(user=user[0]) & Q(
+                scheduleDay=kwargs["date"])).count()
+            userSerializer = CustomerSerializer(user[0])
+            return Response({"QuantityTrips": trips, "user": userSerializer.data}, status=status.HTTP_200_OK)
+        return Response({"message": "user not exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TripsAvailableForDate(RetrieveAPIView):
@@ -15,7 +27,7 @@ class TripsAvailableForDate(RetrieveAPIView):
                 kwargs["date"], '%Y-%m-%d').date()
             number_trips_for_day = Trip.objects.filter(
                 Q(scheduleDay=date) & Q(isDisable=False)).count()
-            available = True if number_trips_for_day < 1 else False
+            available = True if number_trips_for_day < 20 else False
             return Response({"avaliable": bool(available)}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -52,8 +64,8 @@ class TripCreateAPIView(CreateAPIView):
                         user = User.objects.filter(id=request.data["user"])
                         if len(user) > 0:
                             serializer.save(user=user[0])
-                        else :
-                            return Response({"message":"user not found"},status=status.HTTP_400_BAD_REQUEST)
+                        else:
+                            return Response({"message": "user not found"}, status=status.HTTP_400_BAD_REQUEST)
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)

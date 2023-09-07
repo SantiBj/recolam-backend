@@ -16,7 +16,8 @@ from .views.TripViews import (
     EndTripsForCustomer,
     TripsWithoutInitForDate,
     TripsActivesToday,
-    TripsAvailableForDate
+    TripsAvailableForDate,
+    QuantityTripsForCustomerInDate
 )
 from .views.CustomerViews import CustomerAddress,CustomerListAPIView,CustomerForNameSearch
 from .views.TruckViews import truck_available_In_Date_ListAPIView
@@ -42,7 +43,8 @@ urlpatterns = [
     path("customers",CustomerListAPIView.as_view()),
     path("customer-search/<str:search>",CustomerForNameSearch.as_view()),
     path("trip-available-date/<str:date>",TripsAvailableForDate.as_view()),
-    path("customer-address/<str:id>",CustomerAddress.as_view())
+    path("customer-address/<str:id>",CustomerAddress.as_view()),
+    path("quantity-trips-user-date/<str:id>/<str:date>",QuantityTripsForCustomerInDate.as_view()),
 ]
 
 

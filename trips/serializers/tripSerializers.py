@@ -16,8 +16,6 @@ class PartialSerializer(serializers.ModelSerializer):
     truck = serializers.CharField(required=False)
     user = serializers.CharField(required=False)
     scheduleDay = serializers.DateField(required=False)
-    weightAvg = serializers.DecimalField(
-        max_digits=6, decimal_places=3, required=False)
     details = serializers.CharField(required=False)
     address = serializers.CharField(required=False)
 

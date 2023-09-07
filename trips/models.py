@@ -79,7 +79,6 @@ class Trip(models.Model):
     endDateCompany = models.DateTimeField(null=True)
     initialDateCustomer = models.DateTimeField(null=True)
     endDateCustomer = models.DateTimeField(null=True)
-    weightAvg = models.DecimalField(max_digits=6,decimal_places=3)
     details = models.CharField(max_length=300)
     isComplete = models.BooleanField(default=False)
     isDisable = models.BooleanField(default=False)
