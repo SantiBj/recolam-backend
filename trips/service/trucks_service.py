@@ -1,7 +1,6 @@
 from django.db import connection
 
 def consult(date):
-    print(date)
     query = f'''
         SELECT *
         FROM trucks

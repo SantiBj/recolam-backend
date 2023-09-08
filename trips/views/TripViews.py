@@ -5,20 +5,24 @@ from ..models import Trip, Truck, User
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
-from datetime import datetime, time
+from datetime import datetime
 from ..pagination import CustomPagination
-from ..service.trips_service import validation_trip
+from ..service.trips_service import dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
+
+
+class DatesTripsWithoutTruck(ListAPIView):
+    def list(self, request, *args, **kwargs):
+        dates = dateOfTripsWithoutTruck()
+        if dates != None:
+            return Response({"dates": dates}, status=status.HTTP_200_OK)
+        return Response({"message": "not found dates without truck"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class QuantityTripsForCustomerInDate(RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
-        user = User.objects.filter(id=kwargs["id"])
-        if len(user) > 0:
-            trips = Trip.objects.filter(Q(user=user[0]) & Q(
-                scheduleDay=kwargs["date"])).count()
-            userSerializer = CustomerSerializer(user[0])
-            return Response({"QuantityTrips": trips, "user": userSerializer.data}, status=status.HTTP_200_OK)
-        return Response({"message": "user not exists"}, status=status.HTTP_400_BAD_REQUEST)
+        quantityOrError = quantityTripsForCustomerInDate(
+            kwargs["id"], kwargs["date"])
+        return quantityOrError
 
 
 class TripsAvailableForDate(RetrieveAPIView):
@@ -50,16 +54,26 @@ class TripCreateAPIView(CreateAPIView):
                     if int(number_trips_for_truck) == 3:
                         return Response({"message": "the capacity of travels for truck is full in this day"}, status=status.HTTP_409_CONFLICT)
 
+                # validar si un cliente puede mas viajes en un misma fecha
+
                 serializer = TripSerializer(data=request.data)
                 if serializer.is_valid():
                     if not "user" in request.data:
+                        quantityOrError = quantityTripsForCustomerInDate(
+                            request.user, request.data["scheduleDay"])
+                        if quantityOrError.status_code != 200:
+                            return quantityOrError
                         serializer.save(user=request.user)
                     else:
+                        quantityOrError = quantityTripsForCustomerInDate(
+                            request.data["user"], request.data["scheduleDay"])
+
+                        if quantityOrError.status_code != 200:
+                            return quantityOrError
+                        elif quantityOrError.data["QuantityTrips"] >= 2:
+                            return Response({"message": "the ability to create trips on this date with this user is complete"}, status=status.HTTP_400_BAD_REQUEST)
                         user = User.objects.filter(id=request.data["user"])
-                        if len(user) > 0:
-                            serializer.save(user=user[0])
-                        else:
-                            return Response({"message": "user not found"}, status=status.HTTP_400_BAD_REQUEST)
+                        serializer.save(user=user[0])
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return validationsDate
