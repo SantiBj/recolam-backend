@@ -62,3 +62,22 @@ def dateOfTripsWithoutTruck():
         dates = [str(date[0]) for date in results]
         return dates
     return None
+
+def dateOfTripsWithoutInitCompany():
+    today = datetime.now().date()
+
+    query = f'''
+    SELECT scheduleDay
+    FROM trips
+    WHERE initialDateCompany IS NULL AND scheduleDay >= '{today}' AND isDisable = 0
+    GROUP BY scheduleDay
+    ORDER BY scheduleDay ASC
+    '''
+
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+    if len(results) > 0:
+        dates = [str(date[0]) for date in results]
+        return dates
+    return None
