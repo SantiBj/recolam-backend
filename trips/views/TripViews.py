@@ -39,7 +39,6 @@ class TripsAvailableForDate(RetrieveAPIView):
             date = datetime.strptime(
                 kwargs["date"], '%Y-%m-%d').date()
             response = validation_trip(date)
-            print(type(response.status_code))
             return response
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -73,6 +72,7 @@ class TripCreateAPIView(CreateAPIView):
                             return quantityOrError
                         elif quantityOrError.data["QuantityTrips"] >= 2:
                             return Response({"message": "the ability to create trips on this date with this user is complete"}, status=status.HTTP_400_BAD_REQUEST)
+                        serializer.save(user=request.user)
                     else:
                         quantityOrError = quantityTripsForCustomerInDate(
                             request.data["user"], request.data["scheduleDay"])
@@ -88,9 +88,6 @@ class TripCreateAPIView(CreateAPIView):
             return validationsDate
         except TypeError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-# TODO
-# actualizar los que tengan el disable en false
 
 
 class TripUpdateAPIView(UpdateAPIView):
@@ -128,18 +125,21 @@ class TripDestroyAPIView(DestroyAPIView):
         except:
             return Response({"error": "Data Not Valid"}, status=status.HTTP_400_BAD_REQUEST)
 
-
+# validar que el viaje no haya iniciado
 class TripRetrieveAPIView(RetrieveAPIView):
     queryset = Trip.objects.all()
-    serializer_class = TripSerializer
+    serializer_class = TripWithCustomerSerializer
     lookup_url_kwarg = 'pk'
     lookup_field = 'id'
 
     def retrieve(self, request, *args, **kwargs):
+        today = datetime.now().date()
         instance = self.get_object()
         if not instance.isDisable:
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if instance.scheduleDay == today:
+                serializer = self.get_serializer(instance)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({"error":"the date of trip is not equals a today"},status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -357,7 +357,8 @@ class EndTripsForCustomer(ListAPIView):
             return self.get_paginated_response(serializer.data)
         return Response({"message": "customer not have trips finished"}, status=status.HTTP_400_BAD_REQUEST)
 
-
+# trip without initialDate company and with truck assign
+# and scheduleDay is equals a today
 class TripsWithoutInitForDate(ListAPIView):
     serializer_class = TripSerializer
     pagination_class = CustomPagination
@@ -366,7 +367,8 @@ class TripsWithoutInitForDate(ListAPIView):
         try:
             today = datetime.now().date()
             trips = Trip.objects.filter(
-                Q(isDisable=False) & Q(scheduleDay=today))
+                Q(isDisable=False) & Q(scheduleDay=today)).exclude(truck__isnull=True)
+            
             if len(trips) > 0:
                 tripsWithoutInitComp = []
                 for trip in trips:
