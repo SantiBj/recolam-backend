@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 
@@ -60,6 +59,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Truck(models.Model):
     placa = models.CharField(max_length=6, unique=True, primary_key=True)
+    isDisable = models.BooleanField(default=False)
 
     class Meta:
         db_table = "trucks"
