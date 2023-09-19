@@ -1,5 +1,7 @@
 from rest_framework import generics
 from ..models import Trip, Truck
+from ..service.trips_service import truckBusy
+from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.truckSerializers import TruckSerializer
 from ..service.trucks_service import consult
 from rest_framework.response import Response
@@ -27,6 +29,11 @@ class truck_available_In_Date_ListAPIView(generics.ListAPIView):
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# indicar que el camion no puede ser desactivado porque tiene varios viajes pendientes
+# si se desactiva se cancelar los viajes pendientes del camión
+# si no se podra desactivar si tiene viajes en curso
+# viaje en curso que tiene el camion
+
 
 class DisableTruck(generics.UpdateAPIView):
     queryset = Truck.objects.all()
@@ -48,3 +55,14 @@ class TruckListAPIView(generics.ListAPIView):
     queryset = Truck.objects.all()
     serializer_class = TruckSerializer
     pagination_class = CustomPagination
+
+
+class TruckIsBusy(generics.RetrieveAPIView):
+
+    def retrieve(self, request, *args, **kwargs):
+        trip = Trip.objects.filter(id=kwargs["trip"])[0]
+        if trip != None:
+            serializer = TripWithCustomerSerializer(trip)
+            truckIsBusy = truckBusy(serializer.data)
+            return Response(bool(truckIsBusy), status=status.HTTP_200_OK)
+        return Response({"message":"trip not found"},status=status.HTTP_400_BAD_REQUEST)

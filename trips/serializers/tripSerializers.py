@@ -17,6 +17,22 @@ class TripWithCustomerSerializer(serializers.ModelSerializer):
         model = Trip
         fields = "__all__"
 
+class TripInfoTruckAndCustomerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    truck = serializers.CharField()
+    user = serializers.CharField()
+    scheduleDay = serializers.DateField()
+    address= serializers.CharField()
+    initialDateCompany = serializers.DateTimeField()
+    endDateCompany = serializers.DateTimeField()
+    initialDateCustomer = serializers.DateTimeField()
+    endDateCustomer = serializers.DateTimeField()
+    details = serializers.CharField()
+    isComplete = serializers.BooleanField()
+    isDisable = serializers.BooleanField()
+    truckTraveling = serializers.BooleanField()
+
+
 
 class PartialSerializer(serializers.ModelSerializer):
     truck = serializers.CharField(required=False)

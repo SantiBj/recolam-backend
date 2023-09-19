@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime, time
-from ..models import Trip, User
+from ..models import Trip, User,Truck
 from django.db.models import Q
 from ..serializers.customerSerializers import CustomerSerializer
 from django.db import connection
@@ -37,7 +37,7 @@ def quantityTripsForCustomerInDate(customer, date):
         user = User.objects.filter(id=customer)
         if len(user) > 0:
             trips = Trip.objects.filter(Q(user=user[0]) & Q(
-                scheduleDay=date)).count()
+                scheduleDay=date) & Q(isDisable=False)).count()
             userSerializer = CustomerSerializer(user[0])
             return Response({"QuantityTrips": trips, "user": userSerializer.data}, status=status.HTTP_200_OK)
         return Response({"message": "user not exists"}, status=status.HTTP_400_BAD_REQUEST)
@@ -81,3 +81,36 @@ def dateOfTripsWithoutInitCompany():
         dates = [str(date[0]) for date in results]
         return dates
     return None
+
+def truckWithTripInProcess(trips):
+    tripsWithNewField = []
+
+    for trip in trips:
+        trip = dict(trip)
+
+        truckIsBusy = truckBusy(trip)
+        if truckIsBusy:
+            trip["truckTraveling"] = True
+            tripsWithNewField.append(trip)
+        else:
+            trip["truckTraveling"] = False
+            tripsWithNewField.append(trip)
+
+    return tripsWithNewField
+
+
+def truckBusy(trip):
+    truckBusy = None
+    truck = Truck.objects.get(placa=trip["truck"])
+    tripsTruckThisDay = Trip.objects.filter(Q(truck=truck) & Q(
+        scheduleDay=trip['scheduleDay']) & Q(isDisable=False)).exclude(id=trip['id'])
+    if len(tripsTruckThisDay) > 0:
+        for tripTruck in tripsTruckThisDay:
+            if tripTruck.initialDateCompany != None and tripTruck.endDateCompany == None:
+                truckBusy = True
+            else:
+                if truckBusy is None:
+                    truckBusy = False
+    else:
+        truckBusy = False
+    return truckBusy

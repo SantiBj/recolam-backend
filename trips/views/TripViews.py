@@ -1,13 +1,13 @@
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
-from ..serializers.tripSerializers import TripWithCustomerSerializer, PartialSerializer, TripSerializer
-from ..serializers.customerSerializers import CustomerSerializer
+from ..serializers.tripSerializers import TripInfoTruckAndCustomerSerializer, TripWithCustomerSerializer, PartialSerializer, TripSerializer
 from ..models import Trip, Truck, User
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from datetime import datetime
 from ..pagination import CustomPagination
-from ..service.trips_service import dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
+from ..service.trips_service import truckWithTripInProcess,dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
+from rest_framework.pagination import PageNumberPagination
 
 
 class DatesTripsWithoutTruck(ListAPIView):
@@ -55,6 +55,13 @@ class TripCreateAPIView(CreateAPIView):
             if validationsDate.status_code == 200:
                 number_trips_for_truck = None
                 if "truck" in request.data:
+                    truck = Truck.objects.filter(placa=request.data["truck"])
+                    if len(truck) > 0:
+                        truck = truck[0]
+                        if (truck.isDisable):
+                            return Response({"message": "the truck selected this disable"}, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({"message": "the truck not found"}, status=status.HTTP_400_BAD_REQUEST)
                     number_trips_for_truck = Trip.objects.filter(
                         Q(scheduleDay=request.data["scheduleDay"]) & Q(truck=request.data["truck"]) & Q(isDisable=False)).count()
                 if not number_trips_for_truck is None:
@@ -254,6 +261,8 @@ class AddTruckToTrip(UpdateAPIView):
                 if trip.truck is None:
                     truck = Truck.objects.filter(placa=kwargs["placa"])
                     if len(truck) > 0:
+                        if truck[0].isDisable:
+                            return Response({"message": "The truck can't assigned because this truck is disable"}, status=status.HTTP_400_BAD_REQUEST)
                         countTripsTruck = Trip.objects.filter(
                             Q(truck=truck[0]) & Q(scheduleDay=trip.scheduleDay)).count()
                         if countTripsTruck >= 3:
@@ -372,7 +381,6 @@ class EndTripsForCustomer(ListAPIView):
 
 class TripsWithoutInitForDate(ListAPIView):
     serializer_class = TripSerializer
-    pagination_class = CustomPagination
 
     def list(self, request, *args, **kwargs):
         try:
@@ -386,10 +394,19 @@ class TripsWithoutInitForDate(ListAPIView):
                     if trip.initialDateCompany is None:
                         tripsWithoutInitComp.append(trip)
                 if len(tripsWithoutInitComp) > 0:
-                    page = self.paginate_queryset(tripsWithoutInitComp)
-                    serializer = self.get_serializer(
-                        page, many=True)
-                    return self.get_paginated_response(serializer.data)
+                    serializerInstances = self.get_serializer(
+                        tripsWithoutInitComp, many=True)
+                    # añadiendo un campo para ver si el viaje puede iniciar
+                    tripsNewField = truckWithTripInProcess(
+                        serializerInstances.data)
+                    paginator = PageNumberPagination()
+                    paginator.page_size = request.GET.get('page', 1)
+                    results = paginator.paginate_queryset(
+                        tripsNewField, request)
+                    serializer = TripInfoTruckAndCustomerSerializer(
+                        results, many=True)
+
+                    return paginator.get_paginated_response(serializer.data)
                 return Response({"message": "not fount trip without init for this date"}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"message": "not found trips for this date"}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -10,7 +10,7 @@ def consult(date):
             WHERE scheduleDay = '{date}' AND isDisable = 0
             GROUP BY truck_id 
             HAVING count(id) > 2  AND truck_id IS NOT NULL
-        )
+        ) AND isDisable = 0
     '''
 
     with connection.cursor() as cursor:

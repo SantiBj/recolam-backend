@@ -22,7 +22,7 @@ from .views.TripViews import (
     DatesTripsWithoutInitialDateCompany
 )
 from .views.CustomerViews import CustomerAddress, CustomerListAPIView, CustomerForNameSearch
-from .views.TruckViews import DisableTruck, TruckListAPIView, truck_available_In_Date_ListAPIView
+from .views.TruckViews import TruckIsBusy,DisableTruck, TruckListAPIView, truck_available_In_Date_ListAPIView
 
 urlpatterns = [
     path("trip-create", TripCreateAPIView.as_view()),
@@ -53,5 +53,6 @@ urlpatterns = [
     path("dates-trips-without-initialCompany",
          DatesTripsWithoutInitialDateCompany.as_view()),
     path("trucks",TruckListAPIView.as_view()),
-    path("disable-truck/<str:placa>", DisableTruck.as_view())
+    path("disable-truck/<str:placa>", DisableTruck.as_view()),
+    path("truck-is-busy/<str:trip>",TruckIsBusy.as_view())
 ]
