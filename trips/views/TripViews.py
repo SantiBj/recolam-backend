@@ -6,7 +6,7 @@ from rest_framework import status
 from django.db.models import Q
 from datetime import datetime
 from ..pagination import CustomPagination
-from ..service.trips_service import truckWithTripInProcess,dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
+from ..service.trips_service import truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -162,9 +162,15 @@ class AsignTimeInitialTripCompany(UpdateAPIView):
         if not instance.isDisable:
             if not instance.truck is None:
                 if instance.initialDateCompany is None:
-                    instance.initialDateCompany = datetime.now()
-                    self.perform_update(instance)
-                    return Response({"message": "update success"}, status=status.HTTP_200_OK)
+                    serializerTrip = TripSerializer(instance)
+                    truckIsBusy = truckBusy(serializerTrip.data)
+
+                    print(truckBusy)
+                    if not truckIsBusy:
+                        instance.initialDateCompany = datetime.now()
+                        self.perform_update(instance)
+                        return Response({"message": "update success"}, status=status.HTTP_200_OK)
+                    return Response({"message": "the truck have in process other trip"}, status=status.HTTP_400_BAD_REQUEST)
                 return Response({"message": "the trip already init"}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"message": "cannot init trip without a truck assign"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
@@ -400,7 +406,7 @@ class TripsWithoutInitForDate(ListAPIView):
                     tripsNewField = truckWithTripInProcess(
                         serializerInstances.data)
                     paginator = PageNumberPagination()
-                    paginator.page_size = request.GET.get('page', 1)
+                    paginator.page_size = 1
                     results = paginator.paginate_queryset(
                         tripsNewField, request)
                     serializer = TripInfoTruckAndCustomerSerializer(

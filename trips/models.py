@@ -71,10 +71,10 @@ class Truck(models.Model):
 
 
 class Trip(models.Model):
-    truck = models.ForeignKey(Truck, on_delete=models.CASCADE,null=True)
+    truck = models.ForeignKey(Truck, on_delete=models.CASCADE, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     scheduleDay = models.DateField()
-    address= models.CharField(max_length=50)
+    address = models.CharField(max_length=50)
     initialDateCompany = models.DateTimeField(null=True)
     endDateCompany = models.DateTimeField(null=True)
     initialDateCustomer = models.DateTimeField(null=True)
@@ -89,7 +89,18 @@ class Trip(models.Model):
         verbose_name_plural = "trips"
 
     def __str__(self):
-        return self.user.name + "-/-" + self.truck.placa
+        return str(self.user.name)
+
+
+class TripAssignedTruckDisable(models.Model):
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE)
+    truck = models.ForeignKey(Truck, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "trips_truck_disable"
+
+    def __str__(self) -> str:
+        return self.id + " / " + self.truck.placa
 
 
 class Session(models.Model):

@@ -21,7 +21,7 @@ class CustomerListAPIView(generics.ListAPIView):
                 page = self.paginate_queryset(customers)
                 serializer = self.get_serializer(page, many=True)
                 return self.get_paginated_response(serializer.data)
-            Response({"message": "All customer already have assign two trips in this date"},
+            return Response({"message": "All customer already have assign two trips in this date"},
                      status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
