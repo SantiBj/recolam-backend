@@ -1,8 +1,9 @@
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime, time
-from ..models import Trip, User,Truck
+from ..models import Trip, User, Truck,TripAssignedTruckDisable
 from django.db.models import Q
+from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.customerSerializers import CustomerSerializer
 from django.db import connection
 
@@ -63,9 +64,29 @@ def dateOfTripsWithoutTruck():
         return dates
     return None
 
+
 def dateOfTripsWithoutInitCompany():
     today = datetime.now().date()
 
+    query = f'''
+    SELECT scheduleDay
+    FROM trips
+    WHERE initialDateCompany IS NULL AND scheduleDay >= '{today}' AND isDisable = 0 AND truck_id IS NOT NULL
+    GROUP BY scheduleDay
+    ORDER BY scheduleDay ASC
+    '''
+
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+    if len(results) > 0:
+        dates = [str(date[0]) for date in results]
+        return dates
+    return None
+
+
+def dateTripsWithoutInitCAndOptionalTruck():
+    today = datetime.now().date()
     query = f'''
     SELECT scheduleDay
     FROM trips
@@ -81,6 +102,7 @@ def dateOfTripsWithoutInitCompany():
         dates = [str(date[0]) for date in results]
         return dates
     return None
+
 
 def truckWithTripInProcess(trips):
     tripsWithNewField = []
@@ -114,3 +136,23 @@ def truckBusy(trip):
     else:
         truckBusy = False
     return truckBusy
+
+
+def addFieldOldTruckAssigned(trips):
+    tripsWithNewField = []
+    for trip in trips:
+        tripsWithNewField.append(tripHadTruckAssigned(trip))
+    return tripsWithNewField
+
+
+def tripHadTruckAssigned(trip):
+    tripSerializer = TripWithCustomerSerializer(trip)
+    tripSerializer = dict(tripSerializer.data)
+    truckAssigned = TripAssignedTruckDisable.objects.filter(trip=trip)
+    if len(truckAssigned) > 0:
+        truckAssigned = truckAssigned[0]
+        tripSerializer["oldTruckAssigned"] = truckAssigned.truck.placa
+    else:
+        tripSerializer["oldTruckAssigned"] = None
+
+    return tripSerializer

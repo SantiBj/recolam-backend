@@ -1,12 +1,12 @@
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
-from ..serializers.tripSerializers import TripInfoTruckAndCustomerSerializer, TripWithCustomerSerializer, PartialSerializer, TripSerializer
+from ..serializers.tripSerializers import TripWithOldTruckAssignedSerializer, TripInfoTruckAndCustomerSerializer, TripWithCustomerSerializer, PartialSerializer, TripSerializer
 from ..models import Trip, Truck, User
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from datetime import datetime
 from ..pagination import CustomPagination
-from ..service.trips_service import truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
+from ..service.trips_service import addFieldOldTruckAssigned, dateTripsWithoutInitCAndOptionalTruck, truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -263,14 +263,14 @@ class AddTruckToTrip(UpdateAPIView):
         trip = self.get_object()
         if trip.initialDateCompany is None:
             today = datetime.now().date()
-            if trip.scheduleDay == today or trip.scheduleDay > today:
+            if trip.scheduleDay >= today:
                 if trip.truck is None:
                     truck = Truck.objects.filter(placa=kwargs["placa"])
                     if len(truck) > 0:
                         if truck[0].isDisable:
                             return Response({"message": "The truck can't assigned because this truck is disable"}, status=status.HTTP_400_BAD_REQUEST)
                         countTripsTruck = Trip.objects.filter(
-                            Q(truck=truck[0]) & Q(scheduleDay=trip.scheduleDay)).count()
+                            Q(truck=truck[0]) & Q(scheduleDay=trip.scheduleDay) & Q(isDisable=False)).count()
                         if countTripsTruck >= 3:
                             return Response({"message": "the capacity of travels for truck is full in this day"}, status=status.HTTP_409_CONFLICT)
                         trip.truck = truck[0]
@@ -283,9 +283,31 @@ class AddTruckToTrip(UpdateAPIView):
         return Response({"message": "truck cannot be assigned to a trip that has already started"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class EditTruckTrip(UpdateAPIView):
+    def update(self, request, *args, **kwargs):
+        trip = Trip.objects.filter(id=kwargs["trip"])
+        if len(trip) > 0:
+            trip = trip[0]
+            newTruck = Truck.objects.filter(placa=kwargs["truck"])
+            if len(newTruck) > 0:
+                newTruck = newTruck[0]
+                if not newTruck.isDisable:
+                    if newTruck.placa != trip.truck.placa:
+                        countTripsTruck = Trip.objects.filter(
+                            Q(truck=newTruck) & Q(scheduleDay=trip.scheduleDay) & Q(isDisable=False)).count()
+                        if countTripsTruck >= 3:
+                            return Response({"message": "the capacity of travels for truck is full in this day"}, status=status.HTTP_400_BAD_REQUEST)
+                        trip.truck = newTruck
+                        trip.save()
+                        return Response({"message": "success update"}, status=status.HTTP_200_OK)
+                    return Response({"message": "the same truck cannot be reassigned"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "The truck can't assigned because this truck is disable"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Truck not found"})
+        return Response({"message": ""}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class TripsWithoutTruck(ListAPIView):
     serializer_class = TripWithCustomerSerializer
-    pagination_class = CustomPagination
 
     def list(self, request, *args, **kwargs):
         try:
@@ -299,10 +321,17 @@ class TripsWithoutTruck(ListAPIView):
                     if trip.truck is None:
                         tripsWithoutTruck.append(trip)
                 if len(tripsWithoutTruck) > 0:
-                    page = self.paginate_queryset(tripsWithoutTruck)
-                    serializer = self.get_serializer(
-                        page, many=True)
-                    return self.get_paginated_response(serializer.data)
+                    ###
+                    tripsWithNewField = addFieldOldTruckAssigned(
+                        tripsWithoutTruck)
+                    paginator = PageNumberPagination()
+                    paginator.page_size = 1
+                    results = paginator.paginate_queryset(
+                        tripsWithNewField, request)
+                    serializer = TripWithOldTruckAssignedSerializer(
+                        results, many=True)
+                    return paginator.get_paginated_response(serializer.data)
+                    ###
                 return Response({"message": "not exists trips assign for date inserted"}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
@@ -381,8 +410,43 @@ class EndTripsForCustomer(ListAPIView):
             return self.get_paginated_response(serializer.data)
         return Response({"message": "customer not have trips finished"}, status=status.HTTP_400_BAD_REQUEST)
 
-# trip without initialDate company and with truck assign
-# and scheduleDay is equals a today
+# viajes sin iniciar con camion asignado opcionalmente
+
+
+class TripsWithoutInit(ListAPIView):
+    serializer_class = TripsWithoutInitCustomers
+
+    def list(self, request, *args, **kwargs):
+        try:
+            today = datetime.now().date()
+            date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()
+            if date < today:
+                return Response({"message": "the date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
+
+            trips = Trip.objects.filter(
+                Q(initialDateCompany=None) & Q(scheduleDay=date) & Q(isDisable=False))
+            if len(trips) > 0:
+                tripsWithNewField = addFieldOldTruckAssigned(trips)
+                paginator = PageNumberPagination()
+                paginator.page_size = CustomPagination.page_size
+                results = paginator.paginate_queryset(
+                    tripsWithNewField, request)
+                serializer = TripWithOldTruckAssignedSerializer(
+                    results, many=True)
+                return paginator.get_paginated_response(serializer.data)
+            return Response({"message": "not there is trips without start"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListDatesWithTripsWithoutStart(ListAPIView):
+    def list(self, request, *args, **kwargs):
+        dates = dateTripsWithoutInitCAndOptionalTruck()
+        if dates != None:
+            return Response(dates, status=status.HTTP_200_OK)
+        return Response({"message": "not found trips without start"}, status=status.HTTP_400_BAD_REQUEST)
+
+# viajes sin iniciar con camion asignado opcionalmente
 
 
 class TripsWithoutInitForDate(ListAPIView):
