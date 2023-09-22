@@ -88,3 +88,25 @@ class TruckIsBusy(generics.RetrieveAPIView):
             truckIsBusy = truckBusy(serializer.data)
             return Response(bool(truckIsBusy), status=status.HTTP_200_OK)
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# validando si un camion esta disponible en cierta fecha
+class TruckIsAvailable(generics.RetrieveAPIView):
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()
+            truck = Truck.objects.filter(placa=kwargs["truck"])
+            if len(truck) > 0:
+                truck = truck[0]
+                truckAvailableInDate = consult(date)
+                if len(truckAvailableInDate) > 0:
+                    available = False
+                    for truckAvailable in truckAvailableInDate:
+                        if (truckAvailable["placa"] == truck.placa):
+                            available = True
+                            break
+                    return Response(bool(available), status=status.HTTP_200_OK)
+                return Response({"not found trucks in this date"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "truck not found"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
