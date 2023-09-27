@@ -142,13 +142,10 @@ class TripRetrieveAPIView(RetrieveAPIView):
     lookup_field = 'id'
 
     def retrieve(self, request, *args, **kwargs):
-        today = datetime.now().date()
         instance = self.get_object()
         if not instance.isDisable:
-            if instance.scheduleDay == today:
-                serializer = self.get_serializer(instance)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response({"error": "the date of trip is not equals a today"}, status=status.HTTP_400_BAD_REQUEST)
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -434,7 +431,7 @@ class TripsWithoutInit(ListAPIView):
                 serializer = TripWithOldTruckAssignedSerializer(
                     results, many=True)
                 return paginator.get_paginated_response(serializer.data)
-            return Response({"message": "not there is trips without start"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "not found trips"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
