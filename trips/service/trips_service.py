@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime, time
-from ..models import Trip, User, Truck,TripAssignedTruckDisable
+from ..models import Trip, User, Truck, TripAssignedTruckDisable
 from django.db.models import Q
 from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.customerSerializers import CustomerSerializer
@@ -33,6 +33,26 @@ def validation_trip(date):
     return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def validationDateAvailable(date):
+    now = datetime.now().date()
+    numberTripsInThisDate = Trip.objects.filter(
+        Q(scheduleDay=date) & Q(isDisable=False)).count()
+
+    isSatuday = date.weekday() == 5
+    if (isSatuday):
+        available = True if numberTripsInThisDate < 10 else False
+    else:
+        available = True if numberTripsInThisDate < 20 else False
+
+    if (date >= now):
+        if not date.weekday() == 6:
+            if (available):
+                return Response({"avaliable": bool(available)}, status=status.HTTP_200_OK)
+            return Response({"message": "The selected date reached its maximum travel capacity"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "on the day Sunday we cannot attend you"}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"message": "date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 def quantityTripsForCustomerInDate(customer, date):
     try:
         user = User.objects.filter(id=customer)
@@ -52,7 +72,7 @@ def dateOfTripsWithoutTruck():
     query = f'''
     SELECT scheduleDay 
     FROM trips
-    WHERE truck_id IS NULL AND scheduleDay >= '{today}' AND isDisable = 0
+    WHERE truck_id IS NULL AND scheduleDay >= '{today}' AND isDisable = 0 
     GROUP BY scheduleDay
     ORDER BY scheduleDay ASC
     '''

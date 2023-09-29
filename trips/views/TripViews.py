@@ -5,8 +5,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from datetime import datetime
+from ..service.trucks_service import consult
 from ..pagination import CustomPagination
-from ..service.trips_service import addFieldOldTruckAssigned, dateTripsWithoutInitCAndOptionalTruck, truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
+from ..service.trips_service import validationDateAvailable, addFieldOldTruckAssigned, dateTripsWithoutInitCAndOptionalTruck, truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -105,9 +106,18 @@ class TripUpdateAPIView(UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         serializer = PartialSerializer(data=request.data)
+
         if serializer.is_valid():
             instance = self.get_object()
             if not instance.isDisable:
+                date = datetime.strptime(
+                    serializer.data["scheduleDay"], '%Y-%m-%d').date()
+
+                if serializer.data["scheduleDay"] != instance.scheduleDay:
+                    dateIsAvailable = validationDateAvailable(date)
+                    if (dateIsAvailable.status_code != 200):
+                        return dateIsAvailable
+
                 for key in list(serializer.data.keys()):
                     if not serializer.data[key] is None:
                         setattr(instance, key, serializer.data[key])
@@ -162,7 +172,6 @@ class AsignTimeInitialTripCompany(UpdateAPIView):
                     serializerTrip = TripSerializer(instance)
                     truckIsBusy = truckBusy(serializerTrip.data)
 
-                    print(truckBusy)
                     if not truckIsBusy:
                         instance.initialDateCompany = datetime.now()
                         self.perform_update(instance)
