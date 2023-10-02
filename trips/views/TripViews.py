@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from datetime import datetime
-from ..service.trucks_service import consult
 from ..pagination import CustomPagination
 from ..service.trips_service import validationDateAvailable, addFieldOldTruckAssigned, dateTripsWithoutInitCAndOptionalTruck, truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
 from rest_framework.pagination import PageNumberPagination
@@ -18,6 +17,15 @@ class DatesTripsWithoutTruck(ListAPIView):
             return Response({"dates": dates}, status=status.HTTP_200_OK)
         return Response({"message": "not found dates without truck"}, status=status.HTTP_400_BAD_REQUEST)
 
+class DateForTrip(RetrieveAPIView):
+    queryset = Trip.objects.all()
+    lookup_field = "id"
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance :
+            return Response({"date":str(instance.scheduleDay)},status=status.HTTP_200_OK)
+        return Response({"message":"trip not found"},status=status.HTTP_400_BAD_REQUEST)
 
 class DatesTripsWithoutInitialDateCompany(ListAPIView):
     def list(self, request, *args, **kwargs):
