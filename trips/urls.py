@@ -50,7 +50,7 @@ urlpatterns = [
     path("customers/<str:date>", CustomerListAPIView.as_view()),
     path("customer-search/<str:search>", CustomerForNameSearch.as_view()),
     path("trip-available-date/<str:date>", TripsAvailableForDate.as_view()),
-    path("customer-address/<str:id>", CustomerAddress.as_view()),
+    path("customer/<str:id>", CustomerAddress.as_view()),
     path("quantity-trips-user-date/<str:id>/<str:date>",
          QuantityTripsForCustomerInDate.as_view()),
     path("dates-trip-without-truck", DatesTripsWithoutTruck.as_view()),

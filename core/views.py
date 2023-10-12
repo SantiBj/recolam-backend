@@ -4,7 +4,7 @@ from trips.models import Session, User, Truck
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics, permissions
-from .serializers import UserPersonSerializer, UserTruckSerializer
+from .serializers import UserPersonSerializer, UserTruckSerializer, AdminSerializer
 import json
 
 
@@ -51,6 +51,7 @@ class Register(generics.CreateAPIView):
 
     def post(self, request):
         data = request.data
+        print(data)
         if (data["role"] == "truck"):
             serializer = UserTruckSerializer(data=data)
             if serializer.is_valid():
@@ -59,7 +60,11 @@ class Register(generics.CreateAPIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response({"message": "data is not valid"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
-            serializer = UserPersonSerializer(data=data)
+            serializer = None
+            if (data["role"] == "customer"):
+                serializer = UserPersonSerializer(data=data)
+            else:
+                serializer = AdminSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)

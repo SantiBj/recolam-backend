@@ -39,7 +39,7 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.CharField(max_length=13, unique=True,
                           primary_key=True, null=False)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
     address = models.CharField(max_length=200)
     numberPhone = models.CharField(max_length=10)

@@ -9,6 +9,7 @@ from ..pagination import CustomPagination
 from ..service.customer import customerAvailableForCreateTripInDate
 from datetime import datetime
 from rest_framework.pagination import PageNumberPagination
+from ..pagination import CustomPagination
 
 # listado de clientes disponibles para un viaje en una fecha
 
@@ -25,7 +26,7 @@ class CustomerListAPIView(generics.ListAPIView):
                 customersWithQuantityTrips = numberTripsCustomerInDate(
                     serializerCust.data, date)
                 paginator = PageNumberPagination()
-                paginator.page_size = 1
+                paginator.page_size = CustomPagination.page_size
                 results = paginator.paginate_queryset(
                     customersWithQuantityTrips, request
                 )
@@ -51,7 +52,8 @@ class CustomerAddress(generics.RetrieveAPIView):
         try:
             customer = User.objects.get(
                 Q(id=kwargs["id"]) & Q(role="customer"))
-            return Response({"address": str(customer.address)}, status=status.HTTP_200_OK)
+            serializer = CustomerSerializer(customer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except:
             return Response({"message": "user not found"}, status=status.HTTP_400_BAD_REQUEST)
 
