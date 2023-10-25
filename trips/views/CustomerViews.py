@@ -10,11 +10,16 @@ from ..service.customer import customerAvailableForCreateTripInDate
 from datetime import datetime
 from rest_framework.pagination import PageNumberPagination
 from ..pagination import CustomPagination
-
+from ..service.decorator_swigger import custom_swagger_decorador
 # listado de clientes disponibles para un viaje en una fecha
 
 
+@custom_swagger_decorador
 class CustomerListAPIView(generics.ListAPIView):
+    """
+    Listado de clientes con disponibilidad para tener otro viaje en una fecha especifica
+    """
+
     serializer_class = CustomerWithQuantityTrips
 
     def list(self, request, *args, **kwargs):
@@ -47,7 +52,13 @@ def numberTripsCustomerInDate(customers, date):
     return customersWithNewField
 
 
+@custom_swagger_decorador
 class CustomerAddress(generics.RetrieveAPIView):
+
+    """
+    Informacion de un cliente segun su id
+    """
+
     def retrieve(self, request, *args, **kwargs):
         try:
             customer = User.objects.get(
@@ -58,7 +69,13 @@ class CustomerAddress(generics.RetrieveAPIView):
             return Response({"message": "user not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class CustomerForNameSearch(generics.ListAPIView):
+
+    """
+    Clientes cuya informacion coincida con la busquedad (nombre o id)
+    """
+
     serializer_class = CustomerSerializer
     pagination_class = CustomPagination
 

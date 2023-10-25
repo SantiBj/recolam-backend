@@ -9,11 +9,18 @@ from rest_framework import status
 from datetime import datetime
 from django.db.models import Q
 from ..pagination import CustomPagination
+from ..service.decorator_swigger import custom_swagger_decorador
 
 # camiones con menos de 3 viajes en la fecha indicada
 
 
+@custom_swagger_decorador
 class truck_available_In_Date_ListAPIView(generics.ListAPIView):
+
+    """
+    Lista de camiones activos disponibles para ser asignados en una fecha especifica
+    """
+
     serializer_class = TruckSerializer
     pagination_class = CustomPagination
 
@@ -36,7 +43,15 @@ class truck_available_In_Date_ListAPIView(generics.ListAPIView):
 # viaje en curso que tiene el camion
 
 
+@custom_swagger_decorador
 class DisableTruck(generics.UpdateAPIView):
+
+    """
+    Activar y desactivar un camion, al desactivar un camion con viajes asignados, los viajes quedaran 
+    sin camion pero deberan indicar que pertenecian al camion desactivado, y al activar el camion 
+    si el viaje no ha sido reasignado se asignara de nuevo al viaje
+    """
+
     queryset = Truck.objects.all()
     serializer_class = TruckSerializer
 
@@ -73,13 +88,25 @@ class DisableTruck(generics.UpdateAPIView):
         return Response({"message": "not found truck"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TruckListAPIView(generics.ListAPIView):
+
+    """
+    Listado de camiones
+    """
+
     queryset = Truck.objects.all()
     serializer_class = TruckSerializer
     pagination_class = CustomPagination
 
 
+@custom_swagger_decorador
 class TruckIsBusy(generics.RetrieveAPIView):
+
+    """
+    Devuelve si el camion asignado a un viaje se encuentra a un 
+    disponible luego de cambiar la fecha del viaje
+    """
 
     def retrieve(self, request, *args, **kwargs):
         trip = Trip.objects.filter(id=kwargs["trip"])[0]
@@ -91,7 +118,13 @@ class TruckIsBusy(generics.RetrieveAPIView):
 
 
 # validando si un camion esta disponible en cierta fecha
+@custom_swagger_decorador
 class TruckIsAvailable(generics.RetrieveAPIView):
+
+    """
+    Validando si un camion se encuentra disponible en cierta fecha
+    """
+
     def retrieve(self, request, *args, **kwargs):
         try:
             date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()

@@ -8,26 +8,43 @@ from datetime import datetime
 from ..pagination import CustomPagination
 from ..service.trips_service import validationDateAvailable, addFieldOldTruckAssigned, dateTripsWithoutInitCAndOptionalTruck, truckBusy, truckWithTripInProcess, dateOfTripsWithoutInitCompany, dateOfTripsWithoutTruck, validation_trip, quantityTripsForCustomerInDate
 from rest_framework.pagination import PageNumberPagination
+from ..service.decorator_swigger import custom_swagger_decorador
 
 
+@custom_swagger_decorador
 class DatesTripsWithoutTruck(ListAPIView):
+    """
+    Fechas de los viajes sin camiones asignados
+    """
+
     def list(self, request, *args, **kwargs):
         dates = dateOfTripsWithoutTruck()
         if dates != None:
             return Response({"dates": dates}, status=status.HTTP_200_OK)
         return Response({"message": "not found dates without truck"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+@custom_swagger_decorador
 class DateForTrip(RetrieveAPIView):
+    """
+    Fecha de un viaje segun su id
+    """
     queryset = Trip.objects.all()
     lookup_field = "id"
-    
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if instance :
-            return Response({"date":str(instance.scheduleDay)},status=status.HTTP_200_OK)
-        return Response({"message":"trip not found"},status=status.HTTP_400_BAD_REQUEST)
+        if instance:
+            return Response({"date": str(instance.scheduleDay)}, status=status.HTTP_200_OK)
+        return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+@custom_swagger_decorador
 class DatesTripsWithoutInitialDateCompany(ListAPIView):
+    """
+    Fechas de los viajes agendados sin iniciar
+    """
+
     def list(self, request, *args, **kwargs):
         dates = dateOfTripsWithoutInitCompany()
         if dates != None:
@@ -35,14 +52,26 @@ class DatesTripsWithoutInitialDateCompany(ListAPIView):
         return Response({"message": "not found dates without truck"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class QuantityTripsForCustomerInDate(RetrieveAPIView):
+    """
+    Numero de viajes que tiene un cliente asignados en una fecha especifica
+    """
+
     def retrieve(self, request, *args, **kwargs):
         quantityOrError = quantityTripsForCustomerInDate(
             kwargs["id"], kwargs["date"])
         return quantityOrError
 
 
+@custom_swagger_decorador
 class TripsAvailableForDate(RetrieveAPIView):
+    """
+    Validacion de la disponiblidad de un viaje en una fecha especifica teniendo 
+    en cuenta la cantidad de viajes que se pueden realizar en el dia, segun si es de lunes a viernes o un sabado, 
+    tambien si el viaje se quiere realizar el mismo dia se podra agendar hasta cierta hora del dia
+    """
+
     def retrieve(self, request, *args, **kwargs):
         try:
             date = datetime.strptime(
@@ -53,7 +82,11 @@ class TripsAvailableForDate(RetrieveAPIView):
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripCreateAPIView(CreateAPIView):
+    """
+    Creacion de un viaje validando la disponiblidad del dia , del camion y del cliente
+    """
     serializer_class = TripSerializer
 
     def create(self, request):
@@ -106,7 +139,12 @@ class TripCreateAPIView(CreateAPIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripUpdateAPIView(UpdateAPIView):
+    """
+    Actualizacion de un viaje, si se cambia la fecha se validara la disponibilidad, 
+    retorna la instancia actualizada
+    """
     queryset = Trip.objects.all()
     lookup_field = "id"
     lookup_url_kwarg = "pk"
@@ -136,7 +174,12 @@ class TripUpdateAPIView(UpdateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripDestroyAPIView(DestroyAPIView):
+    """
+    Eliminacion del viaje, no se elimina directamente, si no se desactiva
+    """
+
     serializer_class = TripSerializer
     queryset = Trip.objects.all()
     lookup_field = "pk"
@@ -153,7 +196,11 @@ class TripDestroyAPIView(DestroyAPIView):
 # validar que el viaje no haya iniciado
 
 
+@custom_swagger_decorador
 class TripRetrieveAPIView(RetrieveAPIView):
+    """
+    Descripcion de un viaje segun el id proporcionado por el cliente
+    """
     queryset = Trip.objects.all()
     serializer_class = TripWithCustomerSerializer
     lookup_url_kwarg = 'pk'
@@ -167,7 +214,13 @@ class TripRetrieveAPIView(RetrieveAPIView):
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class AsignTimeInitialTripCompany(UpdateAPIView):
+    """
+    Inicio de un viaje por parte de la empresa segun el id del viaje, 
+    el viaje iniciara si no se tiene previamente un inicio y si el resto
+    de campos que controlan el ciclo de vida del viaje se encuentran vacios  
+    """
     queryset = Trip.objects.all()
     lookup_field = 'id'
     lookup_url_kwarg = 'pk'
@@ -190,7 +243,12 @@ class AsignTimeInitialTripCompany(UpdateAPIView):
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class AsignTimeEndTripCompany(UpdateAPIView):
+    """
+    Finalizacion de un viaje segun el id de este, 
+    se tiene en cuenta que finalizara si ya existe previamente la finalizacion de este por parte del cliente
+    """
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     lookup_field = "id"
@@ -212,7 +270,12 @@ class AsignTimeEndTripCompany(UpdateAPIView):
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripsForDateListAPIView(ListAPIView):
+    """
+    Listado de viajes en una fecha, 
+    se veran todos los viajes activos, no se tendra en cuenta si ya inicio el  viaje o no
+    """
     serializer_class = TripSerializer
     pagination_class = CustomPagination
 
@@ -229,7 +292,12 @@ class TripsForDateListAPIView(ListAPIView):
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class AsignTimeArriveCustomer(UpdateAPIView):
+    """
+    Asignacion del inicio del viaje por parte del cliente
+    """
+
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     lookup_field = "id"
@@ -248,7 +316,11 @@ class AsignTimeArriveCustomer(UpdateAPIView):
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class AsignTimeEndCustomer(UpdateAPIView):
+    """
+    Finalizacion del viaje por parte del cliente
+    """
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     lookup_field = "id"
@@ -267,7 +339,12 @@ class AsignTimeEndCustomer(UpdateAPIView):
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class AddTruckToTrip(UpdateAPIView):
+    """
+    Asignacion de un camion a un viaje, basado en la disponiblidad 
+    del camion seleccionado para a la fecha del viaje
+    """
     serializer_class = TripSerializer
     queryset = Trip.objects.all()
     lookup_field = "id"
@@ -297,7 +374,13 @@ class AddTruckToTrip(UpdateAPIView):
         return Response({"message": "truck cannot be assigned to a trip that has already started"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class EditTruckTrip(UpdateAPIView):
+    """
+    Actualizacion del camion previamente seleccionado, teniendo en cuenta si el camion distinto
+    al primero y si este nuevo camion esta disponible para la fecha del viaje
+    """
+
     def update(self, request, *args, **kwargs):
         trip = Trip.objects.filter(id=kwargs["trip"])
         if len(trip) > 0:
@@ -320,7 +403,11 @@ class EditTruckTrip(UpdateAPIView):
         return Response({"message": ""}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripsWithoutTruck(ListAPIView):
+    """
+    Lista de viajes sin camion asigando en una fecha
+    """
     serializer_class = TripWithCustomerSerializer
 
     def list(self, request, *args, **kwargs):
@@ -352,8 +439,11 @@ class TripsWithoutTruck(ListAPIView):
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripsWithoutInitCustomers(ListAPIView):
-    serializer_class = TripSerializer
+    """
+    Viajes sin iniciar por parte del cliente que esta realizando la consulta
+    """
 
     def list(self, request, *args, **kwargs):
         try:
@@ -368,7 +458,7 @@ class TripsWithoutInitCustomers(ListAPIView):
                         if trip.initialDateCompany is None:
                             tripsWithoutArrivedComp.append(trip)
                     if len(tripsWithoutArrivedComp) > 0:
-                        serializer = self.get_serializer(
+                        serializer = TripSerializer(
                             tripsWithoutArrivedComp, many=True)
                         return Response(serializer.data, status=status.HTTP_200_OK)
                     return Response({"message": "not found trips with init for this customer"}, status=status.HTTP_400_BAD_REQUEST)
@@ -377,10 +467,13 @@ class TripsWithoutInitCustomers(ListAPIView):
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-# viajes activos seran del dia de hoy no anteriores
 
-
+@custom_swagger_decorador
 class TripsWithDateInitCompany(ListAPIView):
+    """
+    Listado de viajes marcados como iniciados por parte de la empresa y que pertenecen 
+    al cliente que esta realziando la peticion
+    """
     serializer_class = TripSerializer
     pagination_class = CustomPagination
 
@@ -411,7 +504,11 @@ class TripsWithDateInitCompany(ListAPIView):
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class EndTripsForCustomer(ListAPIView):
+    """
+    Listado de viajes finalizados completamente que pertencen al usuario de la consulta
+    """
     serializer_class = TripSerializer
     pagination_class = CustomPagination
 
@@ -427,8 +524,11 @@ class EndTripsForCustomer(ListAPIView):
 # viajes sin iniciar con camion asignado opcionalmente
 
 
+@custom_swagger_decorador
 class TripsWithoutInit(ListAPIView):
-    serializer_class = TripsWithoutInitCustomers
+    """
+    Listado de viajes sin iniciar por parte de la empresa segun la fecha inidicada en los params
+    """
 
     def list(self, request, *args, **kwargs):
         try:
@@ -453,7 +553,12 @@ class TripsWithoutInit(ListAPIView):
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class ListDatesWithTripsWithoutStart(ListAPIView):
+    """
+    Listado de fechas de viajes sin iniciar por parte de la empresa
+    """
+
     def list(self, request, *args, **kwargs):
         dates = dateTripsWithoutInitCAndOptionalTruck()
         if dates != None:
@@ -463,7 +568,11 @@ class ListDatesWithTripsWithoutStart(ListAPIView):
 # viajes sin iniciar con camion asignado opcionalmente
 
 
+@custom_swagger_decorador
 class TripsWithoutInitForDate(ListAPIView):
+    """
+    Lista de viajes sin iniciar por parte de la empresa segun la fecha indicada
+    """
     serializer_class = TripSerializer
 
     def list(self, request, *args, **kwargs):
@@ -478,7 +587,7 @@ class TripsWithoutInitForDate(ListAPIView):
                     if trip.initialDateCompany is None:
                         tripsWithoutInitComp.append(trip)
                 if len(tripsWithoutInitComp) > 0:
-                    serializerInstances = self.get_serializer(
+                    serializerInstances = TripSerializer(
                         tripsWithoutInitComp, many=True)
                     # añadiendo un campo para ver si el viaje puede iniciar
                     tripsNewField = truckWithTripInProcess(
@@ -498,7 +607,11 @@ class TripsWithoutInitForDate(ListAPIView):
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@custom_swagger_decorador
 class TripsActivesToday(ListAPIView):
+    """
+    Listado de viajes activos (son viajes que tienes fecha de inicio por parte de la empresa pero no tiene fecha fin)
+    """
     serializer_class = TripSerializer
     pagination_class = CustomPagination
 
