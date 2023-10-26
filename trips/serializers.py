@@ -4,4 +4,4 @@ from .models import Truck
 class TruckSerializer(serializers.ModelSerializer):
     class Meta:
         model = Truck
-        fields = ['placa']
+        fields = "__all__"
