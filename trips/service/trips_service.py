@@ -125,10 +125,12 @@ def dateTripsWithoutInitCAndOptionalTruck():
 
 
 def truckWithTripInProcess(trips):
+    serializer = TripWithCustomerSerializer(trips,many=True)
     tripsWithNewField = []
 
-    for trip in trips:
-        trip = dict(trip)
+    for index,tripEntity in enumerate(serializer.data):
+        trip = dict(tripEntity)
+        trip["user"] = trips[index].user
 
         truckIsBusy = truckBusy(trip)
         if truckIsBusy:

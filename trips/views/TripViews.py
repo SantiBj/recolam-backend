@@ -574,7 +574,6 @@ class TripsWithoutInitForDate(ListAPIView):
     """
     Lista de viajes sin iniciar por parte de la empresa segun la fecha indicada
     """
-    serializer_class = TripSerializer
 
     def list(self, request, *args, **kwargs):
         try:
@@ -588,13 +587,11 @@ class TripsWithoutInitForDate(ListAPIView):
                     if trip.initialDateCompany is None:
                         tripsWithoutInitComp.append(trip)
                 if len(tripsWithoutInitComp) > 0:
-                    serializerInstances = TripSerializer(
-                        tripsWithoutInitComp, many=True)
                     # añadiendo un campo para ver si el viaje puede iniciar
                     tripsNewField = truckWithTripInProcess(
-                        serializerInstances.data)
+                        tripsWithoutInitComp)
                     paginator = PageNumberPagination()
-                    paginator.page_size = 1
+                    paginator.page_size = CustomPagination.page_size
                     results = paginator.paginate_queryset(
                         tripsNewField, request)
                     serializer = TripInfoTruckAndCustomerSerializer(
@@ -613,7 +610,7 @@ class TripsActivesToday(ListAPIView):
     """
     Listado de viajes activos (son viajes que tienes fecha de inicio por parte de la empresa pero no tiene fecha fin)
     """
-    serializer_class = TripSerializer
+    serializer_class = TripWithCustomerSerializer
     pagination_class = CustomPagination
 
     def list(self, request, *args, **kwargs):
@@ -631,3 +628,22 @@ class TripsActivesToday(ListAPIView):
                 return self.get_paginated_response(serializer.data)
             return Response({"message": "not found trips with init for this date"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "not found trips for this date"}, status=status.HTTP_400_BAD_REQUEST)
+
+# TODO validar que suscedde si se pasa un id que no existe
+
+
+@custom_swagger_decorador
+class StateTrip(RetrieveAPIView):
+    lookup_field = "id"
+    queryset = Trip.objects.all()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.initialDateCompany != None and instance.initialDateCustomer == None and instance.endDateCustomer == None and instance.endDateCompany == None:
+            return Response({"status": "ICP"}, status=status.HTTP_200_OK)
+        elif instance.initialDateCompany != None and instance.initialDateCustomer != None and instance.endDateCustomer == None and instance.endDateCompany == None:
+            return Response({"status": "ICL"}, status=status.HTTP_200_OK)
+        elif instance.initialDateCompany != None and instance.initialDateCustomer != None and instance.endDateCustomer != None and instance.endDateCompany == None:
+            return Response({"status": "ECL"}, status=status.HTTP_200_OK)
+        elif instance.initialDateCompany != None and instance.initialDateCustomer != None and instance.endDateCustomer != None and instance.endDateCompany != None:
+            return Response({"status": "ECP"}, status=status.HTTP_200_OK)

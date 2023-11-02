@@ -20,7 +20,7 @@ class TripWithCustomerSerializer(serializers.ModelSerializer):
 class TripInfoTruckAndCustomerSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     truck = serializers.CharField()
-    user = serializers.CharField()
+    user = CustomerSerializer()
     scheduleDay = serializers.DateField()
     address= serializers.CharField()
     initialDateCompany = serializers.DateTimeField()
