@@ -51,7 +51,7 @@ class Register(generics.CreateAPIView):
 
     def post(self, request):
         data = request.data
-        print(data)
+        
         if (data["role"] == "truck"):
             serializer = UserTruckSerializer(data=data)
             if serializer.is_valid():

@@ -9,7 +9,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "role", "numberPhone", "address"]
 
 class CustomerWithQuantityTrips(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.CharField()
     name = serializers.CharField()
     role = serializers.CharField()
     numberPhone = serializers.CharField()

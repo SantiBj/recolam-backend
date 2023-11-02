@@ -210,6 +210,7 @@ class TripRetrieveAPIView(RetrieveAPIView):
         instance = self.get_object()
         if not instance.isDisable:
             serializer = self.get_serializer(instance)
+            print(serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -426,7 +427,7 @@ class TripsWithoutTruck(ListAPIView):
                     tripsWithNewField = addFieldOldTruckAssigned(
                         tripsWithoutTruck)
                     paginator = PageNumberPagination()
-                    paginator.page_size = 1
+                    paginator.page_size = CustomPagination.page_size
                     results = paginator.paginate_queryset(
                         tripsWithNewField, request)
                     serializer = TripWithOldTruckAssignedSerializer(

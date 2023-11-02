@@ -168,6 +168,7 @@ def addFieldOldTruckAssigned(trips):
 def tripHadTruckAssigned(trip):
     tripSerializer = TripWithCustomerSerializer(trip)
     tripSerializer = dict(tripSerializer.data)
+    tripSerializer["user"] = trip.user
     truckAssigned = TripAssignedTruckDisable.objects.filter(trip=trip)
     if len(truckAssigned) > 0:
         truckAssigned = truckAssigned[0]
