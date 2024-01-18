@@ -29,8 +29,9 @@ class User(AbstractBaseUser, PermissionsMixin):
                           primary_key=True, null=False)
     name = models.CharField(max_length=100, unique=True)
     isAdmin = models.BooleanField(default=False)
-    address = models.CharField(max_length=200)
-    numberPhone = models.CharField(max_length=10)
+    address = models.CharField(max_length=200,null=True)
+    numberPhone = models.CharField(max_length=10,null=True)
+    quantityTrips = None
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'document'

@@ -48,13 +48,19 @@ class Login(ObtainAuthToken):
 
 class Register(generics.CreateAPIView):
     permission_classes = [isAdmin]
-
+    
+    # poner si es un admin el numberPhone y address
     def post(self, request):
         data = request.data
+        if (data["isAdmin"]):
+            data["numberPhone"] = None
+            data["address"] = None
+
         serializer = UserSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response({"message": serializer.errors}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
 class Logout(generics.DestroyAPIView):

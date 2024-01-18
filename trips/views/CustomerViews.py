@@ -13,7 +13,10 @@ from rest_framework.pagination import PageNumberPagination
 from ..pagination import CustomPagination
 from ..service.decorator_swigger import custom_swagger_decorador
 
-
+###
+## estamos intentando que esta vista use el serializador y el campo de 
+## cantidad que se creo en el modelo por defecto
+###
 @custom_swagger_decorador
 class CustomerListAPIView(generics.ListAPIView):
     """
@@ -21,6 +24,7 @@ class CustomerListAPIView(generics.ListAPIView):
     """
 
     def list(self, request, *args, **kwargs):
+        print("ffff")
         try:
             date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()
             customers = customerAvailableForCreateTripInDate(date)

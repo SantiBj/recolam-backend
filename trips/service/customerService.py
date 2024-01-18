@@ -22,6 +22,8 @@ def customerAvailableForCreateTripInDate(date:datetime):
         cursor.execute(query)
         results = cursor.fetchall()
 
+    print(f"clientes con habiles {results}")
+
     if len(results) > 0:
         customers = []
         for cusDB in results:
@@ -31,12 +33,14 @@ def customerAvailableForCreateTripInDate(date:datetime):
 
 
 #validando la disponibilidad de un cliente para tener otro viaje
-def validationCustomerTrip(user:[str,User],date:datetime):
+def validationCustomerTrip(user:[str,User],date:datetime)->User:
     if (isinstance(user,str)):
         user = User.objects.get(Q(document=user) & Q(isAdmin=False))
     if user.isDisable:
         raise Exception("the user selected is disable.") 
-    userSelectedIsAvailable= filter(lambda customerAvailable: customerAvailable.document == document,customerAvailableForCreateTripInDate(date))
+    userSelectedIsAvailable= filter(lambda customerAvailable: 
+                                    customerAvailable.document == user.document
+                                    ,customerAvailableForCreateTripInDate(date))
     if not userSelectedIsAvailable:
         raise Exception("the user selected isn't available")
     return user

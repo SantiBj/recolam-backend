@@ -1,6 +1,6 @@
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
-from ..serializers.tripSerializers import TripWithOldTruckAssignedSerializer, TripInfoTruckAndCustomerSerializer, TripWithCustomerSerializer, PartialSerializer, TripSerializer
-from ..models import Trip, Truck, User
+from ..serializers.tripSerializers import TripWithOldTruckAssignedSerializer, TripInfoTruckAndCustomerSerializer, TripWithCustomerSerializer, SerializerUpdateTrip, TripSerializer
+from ..models import Trip, Truck
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -82,7 +82,8 @@ class TripsAvailableForDate(RetrieveAPIView):
         try:
             date = datetime.strptime(
                 kwargs["date"], '%Y-%m-%d').date()
-            return Response(validationDateTrip(date),status=status.HTTP_200_OK)
+            validationDateTrip(date)
+            return Response(status=status.HTTP_200_OK)
         except (Exception,ValueError) as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -124,24 +125,32 @@ class TripUpdateAPIView(UpdateAPIView):
 
     #enviar todos los campos solo se usaran los que no son nulos 
     def update(self, request, *args, **kwargs):
-
+        #usar expresiones regulares para validar la direccion y el telefono
         try:
-            serializer = PartialSerializer(data=request.data)
+            serializer = SerializerUpdateTrip(data=request.data)
             if not serializer.is_valid():
                 raise Exception(serializer.errors)
             oldTrip = Trip.objects.get(serializer.data["id"])
             date = datetime.strptime(
                 serializer.data["scheduleDay"], '%Y-%m-%d').date()
-        
+            address = str(serializer.data["address"])
+            truck = serializer.data["truck"]
+            user = serializer.data["user"]
 
             if date != None and date != oldTrip.scheduleDay:
                 validationDateTrip(date)
                 oldTrip.scheduleDay = date
 
-            if serializer.data["truck"] != None and serializer.data["truck"] != oldTrip.truck.placa:
-                print("")
+            if (truck != None and truck != oldTrip.truck.placa):
+                validationTruckTrip(truck,date)
+                oldTrip.truck = truck
             
+            if (user != None and user != oldTrip.user.document):
+                validationCustomerTrip(user,date)
+                oldTrip.user = user
             
+            if (address != None and address.upper() != oldTrip.address.upper()):
+                oldTrip.address = address
         
         except (Exception,ObjectDoesNotExist) as e:
             Response({"message":str(e)},status=status.HTTP_400_BAD_REQUEST)

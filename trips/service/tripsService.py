@@ -10,8 +10,9 @@ from django.db import connection
 
 def validationDateTrip(date:datetime):
     now = datetime.now()
-    numberTripsDaynewTrip = Trip.objects.filter(
+    numberTripsDayNewTrip = Trip.objects.filter(
         Q(scheduleDay=date) & Q(isDisable=False)).count()
+    
     
     if(date < now.date()):
         raise Exception("date must be greater than or equal to today")
@@ -20,18 +21,18 @@ def validationDateTrip(date:datetime):
         raise Exception("on the day Sunday we cannot attend you")
 
     dayIsSaturday = date.weekday() == 5
-    dateIsAvailable = numberTripsDaynewTrip < 10  if dayIsSaturday else numberTripsDaynewTrip < 20
+    dateIsAvailable = numberTripsDayNewTrip < 10  if dayIsSaturday else numberTripsDayNewTrip < 20
     
-    if(dateIsAvailable):
-        if dayIsSaturday:
-            if date == now.date() and now.time() > time(10, 0, 0):
-                raise Exception("If you want to schedule a trip today you must do it before 10 in the morning")
-        else:
-            if date == now.date() and now.time() > time(13, 0, 0):
-                raise Exception("If you want to schedule a trip today you must do it before 1 in the late")
-        return True
-    raise Exception("There is no ability to assign trips on this date.") 
-
+    if (not dateIsAvailable):
+        raise Exception("There is no ability to assign trips on this date.") 
+    
+    if dayIsSaturday:
+        if date == now.date() and now.time() > time(10, 0, 0):
+            raise Exception("If you want to schedule a trip today you must do it before 10 in the morning")
+    else:
+        if date == now.date() and now.time() > time(13, 0, 0):
+            raise Exception("If you want to schedule a trip today you must do it before 1 in the late")
+    
 
 def numberTripsCustomerInDate(customers:list[dict], date:datetime):
     customersWithNewField:list[dict] = []

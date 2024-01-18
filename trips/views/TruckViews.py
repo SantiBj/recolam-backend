@@ -1,16 +1,9 @@
 from rest_framework import generics
 from ..models import Trip, Truck, TripAssignedTruckDisable
-<<<<<<< HEAD
 from ..service.tripsService import truckBusy
 from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.truckSerializers import TruckSerializer
 from ..service.trucksService import consult
-=======
-from ..service.trips_service import truckBusy
-from ..serializers.tripSerializers import TripWithCustomerSerializer
-from ..serializers.truckSerializers import TruckSerializer
-from ..service.trucks_service import consult
->>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime
@@ -25,7 +18,7 @@ from ..service.decorator_swigger import custom_swagger_decorador
 class truck_available_In_Date_ListAPIView(generics.ListAPIView):
 
     """
-    Lista de camiones activos disponibles para ser asignados en una fecha especifica
+    Lista de camiones activos disponibles para ser asignados en una fecha especifica.
     """
 
     serializer_class = TruckSerializer
@@ -56,7 +49,7 @@ class DisableTruck(generics.UpdateAPIView):
     """
     Activar y desactivar un camion, al desactivar un camion con viajes asignados, los viajes quedaran 
     sin camion pero deberan indicar que pertenecian al camion desactivado, y al activar el camion 
-    si el viaje no ha sido reasignado se asignara de nuevo al viaje
+    si el viaje no ha sido reasignado se asignara de nuevo al viaje.
     """
 
     queryset = Truck.objects.all()
@@ -99,7 +92,7 @@ class DisableTruck(generics.UpdateAPIView):
 class TruckListAPIView(generics.ListAPIView):
 
     """
-    Listado de camiones
+    Listado de camiones.
     """
 
     queryset = Truck.objects.all()
@@ -112,7 +105,7 @@ class TruckIsBusy(generics.RetrieveAPIView):
 
     """
     Devuelve si el camion asignado a un viaje se encuentra a un 
-    disponible luego de cambiar la fecha del viaje
+    disponible luego de cambiar la fecha del viaje.
     """
 
     def retrieve(self, request, *args, **kwargs):
@@ -129,7 +122,7 @@ class TruckIsBusy(generics.RetrieveAPIView):
 class TruckIsAvailable(generics.RetrieveAPIView):
 
     """
-    Validando si un camion se encuentra disponible en cierta fecha
+    Validando si un camion se encuentra disponible en cierta fecha.
     """
 
     def retrieve(self, request, *args, **kwargs):
@@ -150,10 +143,14 @@ class TruckIsAvailable(generics.RetrieveAPIView):
             return Response({"message": "truck not found"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-<<<<<<< HEAD
 
-
+@custom_swagger_decorador
 class CreateTruck(generics.CreateAPIView):
+
+    """
+    Crear camion.
+    """
+
     def create(self, request, *args, **kwargs):
         serializer = TruckSerializer(data=request.data)
         if serializer.is_valid():
@@ -161,5 +158,3 @@ class CreateTruck(generics.CreateAPIView):
             return Response(serializer.data,status=status.HTTP_200_OK)
         keyOfError = list(serializer.errors.keys())[0]
         return Response({"message":f"{keyOfError} = {serializer.errors[keyOfError][0]}"},status=status.HTTP_400_BAD_REQUEST) 
-=======
->>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1

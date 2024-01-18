@@ -48,13 +48,13 @@ class TripWithOldTruckAssignedSerializer(serializers.Serializer):
     oldTruckAssigned = serializers.CharField()
 
 
-class PartialSerializer(serializers.ModelSerializer):
+class SerializerUpdateTrip(serializers.ModelSerializer):
     id = serializers.IntegerField()
-    truck = serializers.CharField(required=False)
-    user = serializers.CharField(required=False)
-    scheduleDay = serializers.DateField(required=False)
-    details = serializers.CharField(required=False)
-    address = serializers.CharField(required=False)
+    truck = serializers.CharField()
+    user = serializers.CharField()
+    scheduleDay = serializers.DateField()
+    details = serializers.CharField()
+    address = serializers.CharField()
 
     class Meta:
         model = Trip
