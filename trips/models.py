@@ -4,7 +4,6 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 # Create your models here.
 
-<<<<<<< HEAD
 class CustomUserManager(BaseUserManager):
     def create_user(self, document, isAdmin, password=None, **extra_fields):
         if not document:
@@ -12,34 +11,12 @@ class CustomUserManager(BaseUserManager):
         user = self.model(
             document=document,
             isAdmin=isAdmin,
-=======
-class Role(models.Model):
-    name = models.CharField(primary_key=True, max_length=50)
-
-    class Meta:
-        db_table = "roles"
-        verbose_name = "role"
-        verbose_name_plural = "roles"
-
-    def __str__(self):
-        return self.name
-
-
-class CustomUserManager(BaseUserManager):
-    def create_user(self, id, role, password=None, **extra_fields):
-        if not id or not role:
-            raise ValueError("data invalid")
-        user = self.model(
-            id=id,
-            role=role,
->>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
             **extra_fields
         )
         user.set_password(password)
         user.save()
         return user
 
-<<<<<<< HEAD
     def create_user(self, document, name, isAdmin, address, numberPhone, password, **extra_fields):
         return self._create_user(document, name, isAdmin, address, numberPhone, password, **extra_fields)
 
@@ -52,30 +29,11 @@ class User(AbstractBaseUser, PermissionsMixin):
                           primary_key=True, null=False)
     name = models.CharField(max_length=100, unique=True)
     isAdmin = models.BooleanField(default=False)
-=======
-    def create_user(self, id, name, role, address, numberPhone, password, **extra_fields):
-        return self._create_user(id, name, role, address, numberPhone, password, **extra_fields)
-
-    def create_superuser(self, id, name, role, address, numberPhone, password, **extra_fields):
-        return self._create_user(id, name, role, address, numberPhone, password, **extra_fields)
-
-
-class User(AbstractBaseUser, PermissionsMixin):
-    id = models.CharField(max_length=13, unique=True,
-                          primary_key=True, null=False)
-    name = models.CharField(max_length=100, unique=True,null=True)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE)
->>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
     address = models.CharField(max_length=200)
     numberPhone = models.CharField(max_length=10)
     objects = CustomUserManager()
 
-<<<<<<< HEAD
     USERNAME_FIELD = 'document'
-=======
-    REQUIRED_FIELDS = ['role']
-    USERNAME_FIELD = 'id'
->>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
 
     class Meta:
         db_table = "users"
@@ -83,11 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = "users"
 
     def __str__(self):
-<<<<<<< HEAD
         return self.document
-=======
-        return self.id
->>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
 
 
 class Truck(models.Model):
