@@ -1,9 +1,16 @@
 from rest_framework import generics
 from ..models import Trip, Truck, TripAssignedTruckDisable
+<<<<<<< HEAD
 from ..service.tripsService import truckBusy
 from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.truckSerializers import TruckSerializer
 from ..service.trucksService import consult
+=======
+from ..service.trips_service import truckBusy
+from ..serializers.tripSerializers import TripWithCustomerSerializer
+from ..serializers.truckSerializers import TruckSerializer
+from ..service.trucks_service import consult
+>>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime
@@ -143,6 +150,7 @@ class TruckIsAvailable(generics.RetrieveAPIView):
             return Response({"message": "truck not found"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+<<<<<<< HEAD
 
 
 class CreateTruck(generics.CreateAPIView):
@@ -153,3 +161,5 @@ class CreateTruck(generics.CreateAPIView):
             return Response(serializer.data,status=status.HTTP_200_OK)
         keyOfError = list(serializer.errors.keys())[0]
         return Response({"message":f"{keyOfError} = {serializer.errors[keyOfError][0]}"},status=status.HTTP_400_BAD_REQUEST) 
+=======
+>>>>>>> 778f979f7a12139edbef23bb48924bdad3f294c1
