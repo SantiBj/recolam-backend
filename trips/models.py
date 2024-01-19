@@ -69,7 +69,8 @@ class Trip(models.Model):
     endDateCustomer = models.DateTimeField(null=True)
     details = models.CharField(max_length=300)
     isComplete = models.BooleanField(default=False)
-    isDisable = models.BooleanField(default=False)
+    deleteDate = models.DateField()
+    canceledDate = models.DateField()
 
     class Meta:
         db_table = "trips"

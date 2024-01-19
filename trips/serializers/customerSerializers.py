@@ -7,18 +7,9 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = User
         fields = ["document", "name", "isAdmin", "numberPhone", "address"]
 
-class CustomerWithQuantityTrips(serializers.Serializer):
-    document = serializers.CharField()
-    name = serializers.CharField()
-    isAdmin = serializers.BooleanField()
-
-
+class CustomerQtyTrips(serializers.ModelSerializer):
+    quantityTrips = serializers.IntegerField
     class Meta:
         model = User
-        fields = ["document", "name", "role", "numberPhone", "address"]
-
-class CustomerWithQuantityTrips(serializers.Serializer):
-    class Meta:
-        model=User
-        fields = ["document", "name", "isAdmin", 
-                  "numberPhone", "address","quantityTrips"]
+        fields = ["document", "name", "numberPhone",
+                "address","quantityTrips"]

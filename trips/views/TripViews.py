@@ -93,8 +93,8 @@ class TripCreateAPIView(CreateAPIView):
     """
     Creacion de un viaje validando la disponibilidad del dia , del camion y del cliente
     """
-    
     serializer_class = TripSerializer
+    
     def create(self, request):
         try:
             serializer = TripSerializer(data=request.data)
@@ -111,6 +111,7 @@ class TripCreateAPIView(CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         except (Exception,TypeError,ObjectDoesNotExist) as e:
+            print(e)
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -224,6 +225,25 @@ class AsignTimeInitialTripCompany(UpdateAPIView):
                 return Response({"message": "the trip already init"}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"message": "cannot init trip without a truck assign"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class controllerStageOfTrip(UpdateAPIView):
+
+    def update(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            trip = Trip.objects.get(id=kwargs["id"])
+
+            if (trip.initialDateCompany != None and trip.initialDateCustomer 
+                and trip.endDateCustomer and trip.endDateCompany):
+                raise Exception("The trip is over.")
+            
+            
+
+            return 
+        except (Exception,ValueError,ObjectDoesNotExist) as e:
+            return Response({"message":str(e)},status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @custom_swagger_decorador

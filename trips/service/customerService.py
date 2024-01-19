@@ -7,37 +7,50 @@ from django.db.models import Q
 # listado clientes disponibles para tener otro viaje
 def customerAvailableForCreateTripInDate(date:datetime):
     query = f'''
-        SELECT * 
-        FROM users
-        WHERE isAdmin = 0 AND document NOT IN (
-        SELECT user_id 
-        FROM trips
-        WHERE scheduleDay='{date}' AND isDisable = 0
-        GROUP BY user_id
-        HAVING count(id) > 1 AND user_id IS NOT NULL
+    SELECT 
+        users.document,
+        COUNT(trips.id)
+    FROM 
+        users
+    LEFT JOIN 
+        trips ON users.document = trips.user_id
+    WHERE 
+        users.isAdmin = 0 
+        AND users.document NOT IN (
+            SELECT 
+                user_id 
+            FROM 
+                trips
+            WHERE 
+                scheduleDay = '{date}' 
+                AND isDisable = 0
+            GROUP BY 
+                user_id
+            HAVING 
+                COUNT(id) > 1 AND user_id IS NOT NULL
         )
+    GROUP BY 
+        users.document;
     '''
 
     with connection.cursor() as cursor:
         cursor.execute(query)
         results = cursor.fetchall()
 
-    print(f"clientes con habiles {results}")
-
     if len(results) > 0:
-        customers = []
+        customers:list[User] = []
         for cusDB in results:
-            customers.append(User.objects.get(document=cusDB[6]))
+            user = User.objects.get(document=cusDB[0])
+            user.quantityTrips = cusDB[1]
+            customers.append(user)
         return customers
-    return None
+    raise Exception("not found user available.")
 
 
 #validando la disponibilidad de un cliente para tener otro viaje
 def validationCustomerTrip(user:[str,User],date:datetime)->User:
     if (isinstance(user,str)):
         user = User.objects.get(Q(document=user) & Q(isAdmin=False))
-    if user.isDisable:
-        raise Exception("the user selected is disable.") 
     userSelectedIsAvailable= filter(lambda customerAvailable: 
                                     customerAvailable.document == user.document
                                     ,customerAvailableForCreateTripInDate(date))

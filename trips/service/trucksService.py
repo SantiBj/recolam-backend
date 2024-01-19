@@ -29,7 +29,7 @@ def consult(date):
 
 # validando si el camion esta disponible para agendarle un viaje
 def validationTruckTrip(placa:str,date:datetime):
-    truckSelected = Truck.models.get(placa=placa)
+    truckSelected = Truck.objects.get(placa=placa)
     if (truckSelected.isDisable):
         raise Exception("the truck selected is disable.")
     truckSelectedIsAvailable = filter(lambda truckAvailable: truckAvailable["placa"] == placa,consult(date))
