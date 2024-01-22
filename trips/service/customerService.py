@@ -23,7 +23,7 @@ def customerAvailableForCreateTripInDate(date:datetime):
                 trips
             WHERE 
                 scheduleDay = '{date}' 
-                AND isDisable = 0
+                AND deleteDate IS NULL
             GROUP BY 
                 user_id
             HAVING 

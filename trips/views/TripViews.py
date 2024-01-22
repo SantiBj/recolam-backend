@@ -1,5 +1,5 @@
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
-from ..serializers.tripSerializers import TripWithOldTruckAssignedSerializer, TripInfoTruckAndCustomerSerializer, TripWithCustomerSerializer, SerializerUpdateTrip, TripSerializer
+from ..serializers.tripSerializers import TripWithOldTruckAssignedSerializer, TripTruck, TripWithCustomerSerializer, SerializerUpdateTrip, TripSerializer
 from ..models import Trip, Truck
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,7 +10,7 @@ from ..service.customerService import validationCustomerTrip
 from ..service.trucksService import validationTruckTrip
 from ..service.tripsService import ( addFieldOldTruckAssigned,
     dateTripsWithoutInitCAndOptionalTruck,truckBusy,
-    truckWithTripInProcess, dateOfTripsWithoutInitCompany,
+    truckWithTripInProcess, datesOfTheTrips,
     dateOfTripsWithoutTruck, validationDateTrip, quantityTripsForCustomerInDate)
 from rest_framework.pagination import PageNumberPagination
 from ..service.decorator_swigger import custom_swagger_decorador
@@ -46,16 +46,15 @@ class DateForTrip(RetrieveAPIView):
 
 
 @custom_swagger_decorador
-class DatesTripsWithoutInitialDateCompany(ListAPIView):
+class DatesTrips(ListAPIView):
     """
     Fechas de los viajes agendados sin iniciar
     """
+    permission_classes=[]
 
     def list(self, request, *args, **kwargs):
-        dates = dateOfTripsWithoutInitCompany()
-        if dates != None:
-            return Response({"dates": dates}, status=status.HTTP_200_OK)
-        return Response({"message": "not found dates without truck"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"dates": datesOfTheTrips()}, status=status.HTTP_200_OK)
+       
 
 
 @custom_swagger_decorador
@@ -198,79 +197,45 @@ class TripRetrieveAPIView(RetrieveAPIView):
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@custom_swagger_decorador
-class AsignTimeInitialTripCompany(UpdateAPIView):
-    """
-    Inicio de un viaje por parte de la empresa segun el id del viaje, 
-    el viaje iniciara si no se tiene previamente un inicio y si el resto
-    de campos que controlan el ciclo de vida del viaje se encuentran vacios  
-    """
-    queryset = Trip.objects.all()
-    lookup_field = 'id'
-    lookup_url_kwarg = 'pk'
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if not instance.isDisable:
-            if not instance.truck is None:
-                if instance.initialDateCompany is None:
-                    serializerTrip = TripSerializer(instance)
-                    truckIsBusy = truckBusy(serializerTrip.data)
-
-                    if not truckIsBusy:
-                        instance.initialDateCompany = datetime.now()
-                        self.perform_update(instance)
-                        return Response({"message": "update success"}, status=status.HTTP_200_OK)
-                    return Response({"message": "the truck have in process other trip"}, status=status.HTTP_400_BAD_REQUEST)
-                return Response({"message": "the trip already init"}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({"message": "cannot init trip without a truck assign"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class controllerStageOfTrip(UpdateAPIView):
-
+class ControllerStageOfTrip(UpdateAPIView):
     def update(self, request, *args, **kwargs):
         try:
-            user = request.user
+            userAdmin = request.user.isAdmin == True
             trip = Trip.objects.get(id=kwargs["id"])
 
-            if (trip.initialDateCompany != None and trip.initialDateCustomer 
-                and trip.endDateCustomer and trip.endDateCompany):
+            if (trip.deleteDate != None):
+                raise Exception("The trip not found")
+           
+            if (trip.endDateCompany != None):
                 raise Exception("The trip is over.")
             
+            if(trip.truck == None):
+                raise Exception("the trip does not have an assigned truck")
             
-
-            return 
+            if (userAdmin):
+                if (trip.initialDateCompany == None):
+                    truckBusy(trip)
+                    trip.initialDateCompany = datetime.now()
+                else:
+                    trip.initialDateCustomer = trip.initialDateCustomer if trip.initialDateCustomer != None else datetime.now()
+                    trip.endDateCustomer = trip.endDateCustomer if trip.endDateCustomer != None else datetime.now()
+                    trip.endDateCompany = datetime.now()
+            else:
+                if (trip.user.document != request.user.document):
+                    raise Exception("the trip does not belong to the user")
+                if (trip.initialDateCustomer == None):
+                    truckBusy(trip)
+                    trip.initialDateCustomer = trip.initialDateCustomer if trip.initialDateCustomer != None else datetime.now()
+                else:
+                    trip.endDateCustomer = trip.endDateCustomer if trip.endDateCustomer != None else datetime.now()
+            
+            trip.save()
+            return Response(status=status.HTTP_200_OK)            
         except (Exception,ValueError,ObjectDoesNotExist) as e:
             return Response({"message":str(e)},status=status.HTTP_400_BAD_REQUEST)
 
 
-
-@custom_swagger_decorador
-class AsignTimeEndTripCompany(UpdateAPIView):
-    """
-    Finalizacion de un viaje segun el id de este, 
-    se tiene en cuenta que finalizara si ya existe previamente la finalizacion de este por parte del cliente
-    """
-    queryset = Trip.objects.all()
-    serializer_class = TripSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "pk"
-
-    def update(self, request, **kwargs):
-        instance = self.get_object()
-        if not instance.isDisable and instance.endDateCustomer is None:
-            return Response({"message": "the customer's departure date is required first"}, status=status.HTTP_400_BAD_REQUEST)
-        if not instance.isDisable:
-            if not instance.endDateCustomer is None:
-                instance.endDateCompany = datetime.now()
-                instance.isComplete = True
-                instance.save()
-                serializer = self.get_serializer(instance)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "customer trip finish date is required"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @custom_swagger_decorador
@@ -294,52 +259,6 @@ class TripsForDateListAPIView(ListAPIView):
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
-@custom_swagger_decorador
-class AsignTimeArriveCustomer(UpdateAPIView):
-    """
-    Asignacion del inicio del viaje por parte del cliente
-    """
-
-    queryset = Trip.objects.all()
-    serializer_class = TripSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "pk"
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if not instance.isDisable:
-            if not instance.initialDateCompany is None:
-                instance.initialDateCustomer = datetime.now()
-                instance.save()
-                serializer = self.get_serializer(instance)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "company trip departure date is required"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@custom_swagger_decorador
-class AsignTimeEndCustomer(UpdateAPIView):
-    """
-    Finalizacion del viaje por parte del cliente
-    """
-    queryset = Trip.objects.all()
-    serializer_class = TripSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "pk"
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if not instance.isDisable:
-            if not instance.initialDateCustomer is None:
-                instance.endDateCustomer = datetime.now()
-                instance.save()
-                serializer = self.get_serializer(instance)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "customer trip departure date is required"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @custom_swagger_decorador
@@ -527,34 +446,6 @@ class EndTripsForCustomer(ListAPIView):
 # viajes sin iniciar con camion asignado opcionalmente
 
 
-@custom_swagger_decorador
-class TripsWithoutInit(ListAPIView):
-    """
-    Listado de viajes sin iniciar por parte de la empresa segun la fecha inidicada en los params
-    """
-
-    def list(self, request, *args, **kwargs):
-        try:
-            today = datetime.now().date()
-            date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()
-            if date < today:
-                return Response({"message": "the date must be greater than or equal to today"}, status=status.HTTP_400_BAD_REQUEST)
-
-            trips = Trip.objects.filter(
-                Q(initialDateCompany=None) & Q(scheduleDay=date) & Q(isDisable=False))
-            if len(trips) > 0:
-                tripsWithNewField = addFieldOldTruckAssigned(trips)
-                paginator = PageNumberPagination()
-                paginator.page_size = CustomPagination.page_size
-                results = paginator.paginate_queryset(
-                    tripsWithNewField, request)
-                serializer = TripWithOldTruckAssignedSerializer(
-                    results, many=True)
-                return paginator.get_paginated_response(serializer.data)
-            return Response({"message": "not found trips"}, status=status.HTTP_400_BAD_REQUEST)
-        except ValueError as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 @custom_swagger_decorador
 class ListDatesWithTripsWithoutStart(ListAPIView):
@@ -577,35 +468,25 @@ class TripsWithoutInitForDate(ListAPIView):
     Lista de viajes sin iniciar por parte de la empresa segun la fecha indicada
     """
     serializer_class = TripSerializer
+    pagination_class = CustomPagination
 
     def list(self, request, *args, **kwargs):
         try:
-            today = datetime.now().date()
+            date = datetime.strptime(kwargs["date"], "%Y-%m-%d").date()
+            
+            if(date < datetime.now().date()):
+                raise Exception("the date must be greater than today")
+
             trips = Trip.objects.filter(
-                Q(isDisable=False) & Q(scheduleDay=today)).exclude(truck__isnull=True)
+                Q(deleteDate=None) & Q(scheduleDay=date)
+                & Q(initialDateCustomer = None))
 
-            if len(trips) > 0:
-                tripsWithoutInitComp = []
-                for trip in trips:
-                    if trip.initialDateCompany is None:
-                        tripsWithoutInitComp.append(trip)
-                if len(tripsWithoutInitComp) > 0:
-                    serializerInstances = TripSerializer(
-                        tripsWithoutInitComp, many=True)
-                    # añadiendo un campo para ver si el viaje puede iniciar
-                    tripsNewField = truckWithTripInProcess(
-                        serializerInstances.data)
-                    paginator = PageNumberPagination()
-                    paginator.page_size = 1
-                    results = paginator.paginate_queryset(
-                        tripsNewField, request)
-                    serializer = TripInfoTruckAndCustomerSerializer(
-                        results, many=True)
+            if len(trips) == 0: raise Exception("not found trips for this date")
 
-                    return paginator.get_paginated_response(serializer.data)
-                return Response({"message": "not fount trip without init for this date"}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({"message": "not found trips for this date"}, status=status.HTTP_400_BAD_REQUEST)
-
+            page = self.paginate_queryset(trips)
+            serializerInstances = TripTruck(
+                page, many=True)
+            return self.get_paginated_response(serializerInstances.data)
         except ValueError as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

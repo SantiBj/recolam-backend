@@ -1,9 +1,7 @@
-from rest_framework.response import Response
-from rest_framework import status
 from datetime import datetime, time
 from ..models import Trip, User, Truck, TripAssignedTruckDisable
 from django.db.models import Q
-from ..serializers.tripSerializers import TripWithCustomerSerializer
+#from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.customerSerializers import CustomerSerializer
 from django.db import connection
 
@@ -11,8 +9,7 @@ from django.db import connection
 def validationDateTrip(date:datetime):
     now = datetime.now()
     numberTripsDayNewTrip = Trip.objects.filter(
-        Q(scheduleDay=date) & Q(isDisable=False)).count()
-    
+        Q(scheduleDay=date) & Q(deleteDate=None)).count()
     
     if(date < now.date()):
         raise Exception("date must be greater than or equal to today")
@@ -75,13 +72,13 @@ def dateOfTripsWithoutTruck():
     return None
 
 
-def dateOfTripsWithoutInitCompany():
+def datesOfTheTrips():
     today = datetime.now().date()
 
     query = f'''
     SELECT scheduleDay
     FROM trips
-    WHERE initialDateCompany IS NULL AND scheduleDay >= '{today}' AND isDisable = 0 AND truck_id IS NOT NULL
+    WHERE initialDateCompany IS NULL AND scheduleDay >= '{today}' AND deleteDate = 0
     GROUP BY scheduleDay
     ORDER BY scheduleDay ASC
     '''
@@ -89,10 +86,14 @@ def dateOfTripsWithoutInitCompany():
     with connection.cursor() as cursor:
         cursor.execute(query)
         results = cursor.fetchall()
-    if len(results) > 0:
-        dates = [str(date[0]) for date in results]
-        return dates
-    return None
+    
+    
+    dates = [str(date[0]) for date in results]
+    today = datetime.now().date()
+    if datetime.strptime(dates[0],'%Y-%m-%d').date() != today:
+        dates = [str(today),*dates]
+    return dates
+    
 
 
 def dateTripsWithoutInitCAndOptionalTruck():
@@ -131,22 +132,14 @@ def truckWithTripInProcess(trips):
     return tripsWithNewField
 
 
-def truckBusy(trip):
-    truckBusy = None
+def truckBusy(trip:Trip):
     truck = Truck.objects.get(placa=trip["truck"])
     tripsTruckThisDay = Trip.objects.filter(Q(truck=truck) & Q(
-        scheduleDay=trip['scheduleDay']) & Q(isDisable=False)).exclude(id=trip['id'])
+        scheduleDay=trip['scheduleDay']) & Q(deleteDate=None) & Q(canceledDate=None)).exclude(id=trip['id'])
     if len(tripsTruckThisDay) > 0:
         for tripTruck in tripsTruckThisDay:
-            if tripTruck.initialDateCompany != None and tripTruck.endDateCompany == None:
-                truckBusy = True
-            else:
-                if truckBusy is None:
-                    truckBusy = False
-    else:
-        truckBusy = False
-    return truckBusy
-
+            if (tripTruck.initialDateCompany != None and tripTruck.endDateCompany == None):
+                raise Exception("The truck is making another trip")
 
 def addFieldOldTruckAssigned(trips):
     tripsWithNewField = []
@@ -154,7 +147,7 @@ def addFieldOldTruckAssigned(trips):
         tripsWithNewField.append(tripHadTruckAssigned(trip))
     return tripsWithNewField
 
-
+'''
 def tripHadTruckAssigned(trip):
     tripSerializer = TripWithCustomerSerializer(trip)
     tripSerializer = dict(tripSerializer.data)
@@ -167,3 +160,4 @@ def tripHadTruckAssigned(trip):
         tripSerializer["oldTruckAssigned"] = None
 
     return tripSerializer
+'''

@@ -1,8 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (AbstractBaseUser,
+                        BaseUserManager, PermissionsMixin)
 
 
-# Create your models here.
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, document, isAdmin, password=None, **extra_fields):
@@ -68,9 +68,8 @@ class Trip(models.Model):
     initialDateCustomer = models.DateTimeField(null=True)
     endDateCustomer = models.DateTimeField(null=True)
     details = models.CharField(max_length=300)
-    isComplete = models.BooleanField(default=False)
-    deleteDate = models.DateField()
-    canceledDate = models.DateField()
+    deleteDate = models.DateField(null=True)
+    canceledDate = models.DateField(null=True)
 
     class Meta:
         db_table = "trips"
