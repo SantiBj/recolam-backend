@@ -17,8 +17,6 @@ from .views.TripViews import (
     QuantityTripsForCustomerInDate,
     DatesTripsWithoutTruck,
     DatesTrips,
-    ListDatesWithTripsWithoutStart,
-    TripsWithoutInit,
     EditTruckTrip,
     DateForTrip
 )
@@ -31,6 +29,7 @@ urlpatterns = [
     path("trip/<int:pk>", TripRetrieveAPIView.as_view()),
     path("trip/set-stage-time/<int:id>",ControllerStageOfTrip.as_view()),
     path("trips-without-date/<str:date>", TripsWithoutInitForDate.as_view()),
+    path("dates-trips",DatesTrips.as_view()),
 
     path("trip-delete/<int:pk>", TripDestroyAPIView.as_view()),
     path("trips-for-date/<str:date>", TripsForDateListAPIView.as_view()),
@@ -49,12 +48,9 @@ urlpatterns = [
     path("quantity-trips-user-date/<str:id>/<str:date>",
          QuantityTripsForCustomerInDate.as_view()),
     path("dates-trip-without-truck", DatesTripsWithoutTruck.as_view()),
-    path("dates-trips",DatesTrips.as_view()),
     path("trucks", TruckListAPIView.as_view()),
     path("disable-truck/<str:placa>", DisableTruck.as_view()),
     path("truck-is-busy/<str:trip>", TruckIsBusy.as_view()),
-    path("date-trips-without-start", ListDatesWithTripsWithoutStart.as_view()),
-    path("trips-without-start/<str:date>", TripsWithoutInit.as_view()),
     path("edit-truck-trip/<str:trip>/<str:truck>", EditTruckTrip.as_view()),
     path("truck-available/<str:date>/<str:truck>", TruckIsAvailable.as_view()),
     path("create-truck", CreateTruck.as_view()),

@@ -443,24 +443,6 @@ class EndTripsForCustomer(ListAPIView):
             return self.get_paginated_response(serializer.data)
         return Response({"message": "customer not have trips finished"}, status=status.HTTP_400_BAD_REQUEST)
 
-# viajes sin iniciar con camion asignado opcionalmente
-
-
-
-@custom_swagger_decorador
-class ListDatesWithTripsWithoutStart(ListAPIView):
-    """
-    Listado de fechas de viajes sin iniciar por parte de la empresa
-    """
-
-    def list(self, request, *args, **kwargs):
-        dates = dateTripsWithoutInitCAndOptionalTruck()
-        if dates != None:
-            return Response(dates, status=status.HTTP_200_OK)
-        return Response({"message": "not found trips without start"}, status=status.HTTP_400_BAD_REQUEST)
-
-# viajes sin iniciar con camion asignado opcionalmente
-
 
 @custom_swagger_decorador
 class TripsWithoutInitForDate(ListAPIView):
@@ -481,13 +463,15 @@ class TripsWithoutInitForDate(ListAPIView):
                 Q(deleteDate=None) & Q(scheduleDay=date)
                 & Q(initialDateCustomer = None))
 
-            if len(trips) == 0: raise Exception("not found trips for this date")
+            if len(trips) == 0: 
+                raise Exception("not found trips for this date")
 
             page = self.paginate_queryset(trips)
             serializerInstances = TripTruck(
                 page, many=True)
             return self.get_paginated_response(serializerInstances.data)
-        except ValueError as e:
+        except (ValueError,Exception) as e:
+            print(e)
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -90,8 +90,12 @@ def datesOfTheTrips():
     
     dates = [str(date[0]) for date in results]
     today = datetime.now().date()
-    if datetime.strptime(dates[0],'%Y-%m-%d').date() != today:
-        dates = [str(today),*dates]
+
+    if len(dates) > 0:
+        if datetime.strptime(dates[0],'%Y-%m-%d').date() != today:
+            dates = [str(today),*dates]
+    else:
+        dates = [str(today)]
     return dates
     
 
