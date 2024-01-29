@@ -113,7 +113,7 @@ class TruckIsBusy(generics.RetrieveAPIView):
         if trip != None:
             serializer = TripWithCustomerSerializer(trip)
             truckIsBusy = truckBusy(serializer.data)
-            return Response(bool(truckIsBusy), status=status.HTTP_200_OK)
+            return Response(True, status=status.HTTP_200_OK)
         return Response({"message": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 

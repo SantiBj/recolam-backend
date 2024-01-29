@@ -2,13 +2,13 @@ from django.urls import path
 from .views.TripViews import (
     TripRetrieveAPIView,
     TripDestroyAPIView,
+    TripCancelAPIView,
     TripUpdateAPIView,
     TripCreateAPIView,
     ControllerStageOfTrip,
     TripsForDateListAPIView,
     AddTruckToTrip,
     TripsWithoutTruck,
-    TripsWithoutInitCustomers,
     TripsWithDateInitCompany,
     EndTripsForCustomer,
     TripsWithoutInitForDate,
@@ -16,9 +16,7 @@ from .views.TripViews import (
     TripsAvailableForDate,
     QuantityTripsForCustomerInDate,
     DatesTripsWithoutTruck,
-    DatesTrips,
-    EditTruckTrip,
-    DateForTrip
+    DatesTrips
 )
 from .views.CustomerViews import Customer, CustomerListAPIView, CustomerForNameSearch
 from .views.TruckViews import TruckIsAvailable, TruckIsBusy, DisableTruck, TruckListAPIView, truck_available_In_Date_ListAPIView,CreateTruck
@@ -27,11 +25,13 @@ urlpatterns = [
     path("trip-create", TripCreateAPIView.as_view()),
     path("trip-update/<int:pk>", TripUpdateAPIView.as_view()),
     path("trip/<int:pk>", TripRetrieveAPIView.as_view()),
-    path("trip/set-stage-time/<int:id>",ControllerStageOfTrip.as_view()),
+    path("trip/set-stage-trip/<int:id>",ControllerStageOfTrip.as_view()),
     path("trips-without-date/<str:date>", TripsWithoutInitForDate.as_view()),
     path("dates-trips",DatesTrips.as_view()),
-
     path("trip-delete/<int:pk>", TripDestroyAPIView.as_view()),
+    path("trip-cancel/<int:pk>", TripCancelAPIView.as_view()),
+
+
     path("trips-for-date/<str:date>", TripsForDateListAPIView.as_view()),
     path("trucks-available-date/<str:date>",
          truck_available_In_Date_ListAPIView.as_view()),
@@ -50,9 +50,5 @@ urlpatterns = [
     path("dates-trip-without-truck", DatesTripsWithoutTruck.as_view()),
     path("trucks", TruckListAPIView.as_view()),
     path("disable-truck/<str:placa>", DisableTruck.as_view()),
-    path("truck-is-busy/<str:trip>", TruckIsBusy.as_view()),
-    path("edit-truck-trip/<str:trip>/<str:truck>", EditTruckTrip.as_view()),
-    path("truck-available/<str:date>/<str:truck>", TruckIsAvailable.as_view()),
-    path("create-truck", CreateTruck.as_view()),
-    path("date-trip/<str:id>",DateForTrip.as_view()),
+    path("truck-is-busy/<str:trip>", TruckIsBusy.as_view())
 ]

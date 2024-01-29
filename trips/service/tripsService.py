@@ -27,7 +27,7 @@ def validationDateTrip(date:datetime):
         if date == now.date() and now.time() > time(10, 0, 0):
             raise Exception("If you want to schedule a trip today you must do it before 10 in the morning")
     else:
-        if date == now.date() and now.time() > time(13, 0, 0):
+        if date == now.date() and now.time() > time(18, 0, 0):
             raise Exception("If you want to schedule a trip today you must do it before 1 in the late")
     
 
@@ -137,13 +137,15 @@ def truckWithTripInProcess(trips):
 
 
 def truckBusy(trip:Trip):
-    truck = Truck.objects.get(placa=trip["truck"])
+    print(type(trip))
+    truck = Truck.objects.get(placa=trip.truck)
     tripsTruckThisDay = Trip.objects.filter(Q(truck=truck) & Q(
-        scheduleDay=trip['scheduleDay']) & Q(deleteDate=None) & Q(canceledDate=None)).exclude(id=trip['id'])
+        scheduleDay=trip.scheduleDay) & Q(deleteDate=None) & Q(canceledDate=None)).exclude(id=trip.id)
     if len(tripsTruckThisDay) > 0:
         for tripTruck in tripsTruckThisDay:
             if (tripTruck.initialDateCompany != None and tripTruck.endDateCompany == None):
                 raise Exception("The truck is making another trip")
+
 
 def addFieldOldTruckAssigned(trips):
     tripsWithNewField = []

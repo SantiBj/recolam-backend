@@ -9,9 +9,7 @@ from ..pagination import CustomPagination
 from ..service.customerService import validationCustomerTrip
 from ..service.trucksService import validationTruckTrip
 from ..service.tripsService import ( addFieldOldTruckAssigned,
-    dateTripsWithoutInitCAndOptionalTruck,truckBusy,
-    truckWithTripInProcess, datesOfTheTrips,
-    dateOfTripsWithoutTruck, validationDateTrip, quantityTripsForCustomerInDate)
+    truckBusy, datesOfTheTrips, dateOfTripsWithoutTruck, validationDateTrip, quantityTripsForCustomerInDate)
 from rest_framework.pagination import PageNumberPagination
 from ..service.decorator_swigger import custom_swagger_decorador
 from django.core.exceptions import ObjectDoesNotExist
@@ -158,6 +156,26 @@ class TripUpdateAPIView(UpdateAPIView):
 
 
 @custom_swagger_decorador
+class TripCancelAPIView(UpdateAPIView):
+    """
+    Cancelar del viaje, no se elimina directamente, si no se desactiva
+    """
+
+    serializer_class = TripSerializer
+    queryset = Trip.objects.all()
+    lookup_field = "pk"
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.canceledDate = datetime.now()
+            instance.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except:
+            return Response({"error": "The trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@custom_swagger_decorador
 class TripDestroyAPIView(DestroyAPIView):
     """
     Eliminacion del viaje, no se elimina directamente, si no se desactiva
@@ -170,11 +188,13 @@ class TripDestroyAPIView(DestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            instance.isDisable = True
+            instance.deleteDate = datetime.now()
             instance.save()
-            return Response({"message": "trip destroy with success"})
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except:
-            return Response({"error": "Data Not Valid"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "The trip not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 # validar que el viaje no haya iniciado
 
@@ -191,7 +211,7 @@ class TripRetrieveAPIView(RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if not instance.isDisable:
+        if not instance.deleteDate:
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"error": "trip not found"}, status=status.HTTP_400_BAD_REQUEST)
@@ -203,35 +223,36 @@ class ControllerStageOfTrip(UpdateAPIView):
         try:
             userAdmin = request.user.isAdmin == True
             trip = Trip.objects.get(id=kwargs["id"])
+            print(trip.initialDateCompany)
 
-            if (trip.deleteDate != None):
+            if (trip.deleteDate is not None):
                 raise Exception("The trip not found")
            
-            if (trip.endDateCompany != None):
+            if (trip.endDateCompany is not None):
                 raise Exception("The trip is over.")
             
-            if(trip.truck == None):
+            if(trip.truck is None):
                 raise Exception("the trip does not have an assigned truck")
             
             if (userAdmin):
-                if (trip.initialDateCompany == None):
+                if (trip.initialDateCompany is None):
                     truckBusy(trip)
                     trip.initialDateCompany = datetime.now()
                 else:
-                    trip.initialDateCustomer = trip.initialDateCustomer if trip.initialDateCustomer != None else datetime.now()
-                    trip.endDateCustomer = trip.endDateCustomer if trip.endDateCustomer != None else datetime.now()
+                    trip.initialDateCustomer = trip.initialDateCustomer or datetime.now()
+                    trip.endDateCustomer = trip.endDateCustomer or datetime.now()
                     trip.endDateCompany = datetime.now()
             else:
                 if (trip.user.document != request.user.document):
                     raise Exception("the trip does not belong to the user")
-                if (trip.initialDateCustomer == None):
+                if (trip.initialDateCustomer is None):
                     truckBusy(trip)
-                    trip.initialDateCustomer = trip.initialDateCustomer if trip.initialDateCustomer != None else datetime.now()
+                    trip.initialDateCustomer = trip.initialDateCustomer or datetime.now()
                 else:
-                    trip.endDateCustomer = trip.endDateCustomer if trip.endDateCustomer != None else datetime.now()
+                    trip.endDateCustomer = trip.endDateCustomer or datetime.now()
             
             trip.save()
-            return Response(status=status.HTTP_200_OK)            
+            return Response({},status=status.HTTP_200_OK)            
         except (Exception,ValueError,ObjectDoesNotExist) as e:
             return Response({"message":str(e)},status=status.HTTP_400_BAD_REQUEST)
 
@@ -459,9 +480,11 @@ class TripsWithoutInitForDate(ListAPIView):
             if(date < datetime.now().date()):
                 raise Exception("the date must be greater than today")
 
+            print(date)
+
             trips = Trip.objects.filter(
                 Q(deleteDate=None) & Q(scheduleDay=date)
-                & Q(initialDateCustomer = None))
+                & Q(initialDateCompany = None))
 
             if len(trips) == 0: 
                 raise Exception("not found trips for this date")

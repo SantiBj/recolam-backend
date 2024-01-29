@@ -14,9 +14,17 @@ class TripSerializer(serializers.ModelSerializer):
 
 class TripWithCustomerSerializer(serializers.ModelSerializer):
     user = CustomerSerializer()
+    truckBusy = serializers.SerializerMethodField()
     class Meta:
         model = Trip
         fields = "__all__"
+
+    def get_truckBusy(self,instance)->bool:
+        try:
+            truckBusy(instance)
+            return False
+        except:
+            return True
 
 class TripTruck(serializers.ModelSerializer):
     truckBusy = serializers.SerializerMethodField()
@@ -28,9 +36,9 @@ class TripTruck(serializers.ModelSerializer):
     def get_truckBusy(self,instance)->bool:
         try:
             truckBusy(instance)
-            return True
-        except:
             return False
+        except:
+            return True
 
 class TripWithOldTruckAssignedSerializer(serializers.Serializer):
     id = serializers.IntegerField()
