@@ -8,7 +8,7 @@ from datetime import datetime
 from ..pagination import CustomPagination
 from ..service.customerService import validationCustomerTrip
 from ..service.trucksService import validationTruckTrip
-from ..service.tripsService import ( addFieldOldTruckAssigned,
+from ..service.tripsService import ( addFieldOldTruckAssigned,tripExists,
     truckBusy, datesOfTheTrips, dateOfTripsWithoutTruck, validationDateTrip, quantityTripsForCustomerInDate)
 from rest_framework.pagination import PageNumberPagination
 from ..service.decorator_swigger import custom_swagger_decorador
@@ -100,10 +100,17 @@ class TripCreateAPIView(CreateAPIView):
             date = datetime.strptime(
                 request.data["scheduleDay"], '%Y-%m-%d').date()
             validationDateTrip(date)
-            if "truck" in request.data:
+            if request.data["truck"] is not None:
                 validationTruckTrip(request.data["truck"],date)
             userSelected = validationCustomerTrip(request.data["user"] if "user" in request.data else request.user,date)
-        
+            
+            oldTrip = tripExists(serializer.data)
+            if oldTrip:
+                if oldTrip.canceledDate is None:
+                    raise Exception("The trip already exists.")
+                else:
+                    oldTrip.canceledDate = None
+                    return Response(oldTrip.save(),status=status.HTTP_201_CREATED)
             serializer.save(user=userSelected)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
@@ -163,11 +170,13 @@ class TripCancelAPIView(UpdateAPIView):
 
     serializer_class = TripSerializer
     queryset = Trip.objects.all()
+    lookup_url_kwarg = "pk"
     lookup_field = "pk"
 
-    def destroy(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+            print(instance.truck)
             instance.canceledDate = datetime.now()
             instance.save()
             return Response(status=status.HTTP_204_NO_CONTENT)

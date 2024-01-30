@@ -1,38 +1,41 @@
 from datetime import datetime, time
+from ..serializers.tripSerializers import TripSerializer
 from ..models import Trip, User, Truck, TripAssignedTruckDisable
 from django.db.models import Q
-#from ..serializers.tripSerializers import TripWithCustomerSerializer
+# from ..serializers.tripSerializers import TripWithCustomerSerializer
 from ..serializers.customerSerializers import CustomerSerializer
 from django.db import connection
 
 
-def validationDateTrip(date:datetime):
+def validationDateTrip(date: datetime):
     now = datetime.now()
     numberTripsDayNewTrip = Trip.objects.filter(
         Q(scheduleDay=date) & Q(deleteDate=None)).count()
-    
-    if(date < now.date()):
+
+    if (date < now.date()):
         raise Exception("date must be greater than or equal to today")
 
     if (date.weekday() == 6):
         raise Exception("on the day Sunday we cannot attend you")
 
     dayIsSaturday = date.weekday() == 5
-    dateIsAvailable = numberTripsDayNewTrip < 10  if dayIsSaturday else numberTripsDayNewTrip < 20
-    
+    dateIsAvailable = numberTripsDayNewTrip < 10 if dayIsSaturday else numberTripsDayNewTrip < 20
+
     if (not dateIsAvailable):
-        raise Exception("There is no ability to assign trips on this date.") 
-    
+        raise Exception("There is no ability to assign trips on this date.")
+
     if dayIsSaturday:
         if date == now.date() and now.time() > time(10, 0, 0):
-            raise Exception("If you want to schedule a trip today you must do it before 10 in the morning")
+            raise Exception(
+                "If you want to schedule a trip today you must do it before 10 in the morning")
     else:
         if date == now.date() and now.time() > time(18, 0, 0):
-            raise Exception("If you want to schedule a trip today you must do it before 1 in the late")
-    
+            raise Exception(
+                "If you want to schedule a trip today you must do it before 1 in the late")
 
-def numberTripsCustomerInDate(customers:list[dict], date:datetime):
-    customersWithNewField:list[dict] = []
+
+def numberTripsCustomerInDate(customers: list[dict], date: datetime):
+    customersWithNewField: list[dict] = []
     for customer in customers:
         quantity = quantityTripsForCustomerInDate(customer["document"], date)
         customer["quantityTrips"] = quantity["quantityTrips"]
@@ -40,16 +43,16 @@ def numberTripsCustomerInDate(customers:list[dict], date:datetime):
     return customersWithNewField
 
 
-#tengo la sospecha de que se esta usando en otro lado
-def quantityTripsForCustomerInDate(customer:str, date:datetime):
+# tengo la sospecha de que se esta usando en otro lado
+def quantityTripsForCustomerInDate(customer: str, date: datetime):
     user = User.objects.filter(document=customer)
     if len(user) > 0:
         numberTrips = Trip.objects.filter(Q(user=user[0]) & Q(
             scheduleDay=date) & Q(isDisable=False)).count()
         return {
-                "quantityTrips": numberTrips, 
-                "user": CustomerSerializer(user[0]).data
-            }
+            "quantityTrips": numberTrips,
+            "user": CustomerSerializer(user[0]).data
+        }
     raise ValueError("user not exists")
 
 
@@ -86,18 +89,36 @@ def datesOfTheTrips():
     with connection.cursor() as cursor:
         cursor.execute(query)
         results = cursor.fetchall()
-    
-    
+
     dates = [str(date[0]) for date in results]
     today = datetime.now().date()
 
     if len(dates) > 0:
-        if datetime.strptime(dates[0],'%Y-%m-%d').date() != today:
-            dates = [str(today),*dates]
+        if datetime.strptime(dates[0], '%Y-%m-%d').date() != today:
+            dates = [str(today), *dates]
     else:
         dates = [str(today)]
     return dates
-    
+
+
+def tripExists(trip: TripSerializer):
+    trip_filter = (
+        Q(user=trip["user"])
+        & Q(scheduleDay=trip["scheduleDay"])
+        & Q(address=trip["address"])
+    )
+
+    trip = Trip.objects.filter(
+        Q(truck__isnull=True)
+        & trip_filter) if trip["truck"] is None else Trip.objects.filter(
+        Q(truck=trip["truck"]) &
+        trip_filter
+    )
+
+    if len(trip) > 0:
+        return trip
+    return False
+
 
 
 def dateTripsWithoutInitCAndOptionalTruck():
@@ -136,7 +157,7 @@ def truckWithTripInProcess(trips):
     return tripsWithNewField
 
 
-def truckBusy(trip:Trip):
+def truckBusy(trip: Trip):
     print(type(trip))
     truck = Truck.objects.get(placa=trip.truck)
     tripsTruckThisDay = Trip.objects.filter(Q(truck=truck) & Q(
@@ -152,6 +173,7 @@ def addFieldOldTruckAssigned(trips):
     for trip in trips:
         tripsWithNewField.append(tripHadTruckAssigned(trip))
     return tripsWithNewField
+
 
 '''
 def tripHadTruckAssigned(trip):
